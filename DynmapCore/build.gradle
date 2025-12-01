@@ -19,11 +19,11 @@ dependencies {
     implementation 'org.yaml:snakeyaml:1.23'	// DON'T UPDATE - NEWER ONE TRIPS ON WINDOWS ENCODED FILES
     implementation 'com.googlecode.owasp-java-html-sanitizer:owasp-java-html-sanitizer:20180219.1'
     implementation 'org.postgresql:postgresql:42.2.18'
-    implementation 'com.github.linktosriram.s3-lite:core:ffcc851'
-    implementation 'com.github.linktosriram.s3-lite:api:ffcc851'
-    implementation 'com.github.linktosriram.s3-lite:http-client-url-connection:ffcc851'
-    implementation 'com.github.linktosriram.s3-lite:http-client-spi:ffcc851'
-    implementation 'com.github.linktosriram.s3-lite:util:ffcc851'
+    implementation 'com.github.linktosriram.s3-lite:core:master-SNAPSHOT'
+    implementation 'com.github.linktosriram.s3-lite:api:master-SNAPSHOT'
+    implementation 'com.github.linktosriram.s3-lite:http-client-url-connection:master-SNAPSHOT'
+    implementation 'com.github.linktosriram.s3-lite:http-client-spi:master-SNAPSHOT'
+    implementation 'com.github.linktosriram.s3-lite:util:master-SNAPSHOT'
     implementation 'jakarta.xml.bind:jakarta.xml.bind-api:3.0.1'
     implementation 'com.sun.xml.bind:jaxb-impl:3.0.0'
 }
