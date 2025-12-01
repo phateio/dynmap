@@ -23,6 +23,9 @@ jobs:
       run: chmod +x gradlew
 
     - name: Build with Gradle
+      env:
+        USERNAME: ${{ github.actor }}
+        TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: ./gradlew setup build
 
     - name: Upload Spigot JAR
@@ -75,6 +78,9 @@ jobs:
       run: chmod +x oldgradle/gradlew
 
     - name: Build Forge 1.12.2 with Gradle
+      env:
+        USERNAME: ${{ github.actor }}
+        TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         cd oldgradle
         ./gradlew setup build
