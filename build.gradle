@@ -33,11 +33,8 @@ allprojects  {
      maven {
           url "https://maven.pkg.github.com/linktosriram/s3-lite"
           credentials {
-              username = project.findProperty("gpr.user") ?: System.getenv("USERNAME")
-              password = project.findProperty("gpr.key") ?: System.getenv("TOKEN")
-          }
-          content {
-              includeGroup "io.github.linktosriram.s3lite"
+              username = project.findProperty("gpr.user") ?: System.getenv("GPR_USER")
+              password = project.findProperty("gpr.key") ?: System.getenv("GPR_TOKEN")
           }
      }
      maven { url "https://oss.sonatype.org/content/repositories/releases" }

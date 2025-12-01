@@ -24,8 +24,8 @@ jobs:
 
     - name: Build with Gradle
       env:
-        USERNAME: ${{ github.actor }}
-        TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GPR_USER: ${{ secrets.GPR_USER }}
+        GPR_TOKEN: ${{ secrets.GPR_TOKEN }}
       run: ./gradlew setup build
 
     - name: Upload Spigot JAR
@@ -79,8 +79,8 @@ jobs:
 
     - name: Build Forge 1.12.2 with Gradle
       env:
-        USERNAME: ${{ github.actor }}
-        TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GPR_USER: ${{ secrets.GPR_USER }}
+        GPR_TOKEN: ${{ secrets.GPR_TOKEN }}
       run: |
         cd oldgradle
         ./gradlew setup build
