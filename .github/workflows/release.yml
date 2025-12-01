@@ -1,0 +1,91 @@
+name: Release Build
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 21
+      uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+        cache: gradle
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+
+    - name: Build with Gradle
+      run: ./gradlew setup build
+
+    - name: Upload Spigot JAR
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: target/Dynmap-${{ github.event.release.tag_name }}-spigot.jar
+        asset_name: Dynmap-${{ github.event.release.tag_name }}-spigot.jar
+        asset_content_type: application/java-archive
+      continue-on-error: true
+
+    - name: Find and upload all artifacts
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        UPLOAD_URL="${{ github.event.release.upload_url }}"
+        UPLOAD_URL="${UPLOAD_URL%\{*}"
+
+        for jar in target/*.jar; do
+          if [ -f "$jar" ]; then
+            FILENAME=$(basename "$jar")
+            echo "Uploading $FILENAME..."
+
+            curl -X POST \
+              -H "Authorization: token $GITHUB_TOKEN" \
+              -H "Content-Type: application/java-archive" \
+              --data-binary "@$jar" \
+              "${UPLOAD_URL}?name=${FILENAME}"
+          fi
+        done
+
+  build-forge-1-12-2:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 8
+      uses: actions/setup-java@v4
+      with:
+        java-version: '8'
+        distribution: 'temurin'
+        cache: gradle
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x oldgradle/gradlew
+
+    - name: Build Forge 1.12.2 with Gradle
+      run: |
+        cd oldgradle
+        ./gradlew setup build
+
+    - name: Upload Forge 1.12.2 artifact
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: target/Dynmap-${{ github.event.release.tag_name }}-forge-1.12.2.jar
+        asset_name: Dynmap-${{ github.event.release.tag_name }}-forge-1.12.2.jar
+        asset_content_type: application/java-archive
+      continue-on-error: true
