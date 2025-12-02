@@ -6,7 +6,7 @@ on:
 jobs:
   spellcheck:
     name: rojopolis/spellcheck
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
     - name: actions/checkout
       uses: actions/checkout@v2
