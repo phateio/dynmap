@@ -4,12 +4,13 @@ on:
   release:
     types: [created]
 
+permissions:
+  contents: read
+  packages: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: read
 
     steps:
     - name: Checkout repository
@@ -65,9 +66,6 @@ jobs:
   build-forge-1-12-2:
     runs-on: ubuntu-latest
     continue-on-error: true
-    permissions:
-      contents: read
-      packages: read
 
     steps:
     - name: Checkout repository
