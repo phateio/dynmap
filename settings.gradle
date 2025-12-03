@@ -35,7 +35,6 @@ include ':bukkit-helper'
 include ':dynmap-api'
 include ':DynmapCore'
 include ':DynmapCoreAPI'
-// Fabric modules commented out - not needed for Spigot-only builds
 // include ':fabric-1.21.1'
 // include ':fabric-1.21.3'
 // include ':fabric-1.21.5'
@@ -48,7 +47,6 @@ include ':DynmapCoreAPI'
 // include ':fabric-1.16.4'
 // include ':fabric-1.15.2'
 // include ':fabric-1.14.4'
-// Forge modules commented out - not needed for Spigot-only builds
 // include ':forge-1.21.6'
 // include ':forge-1.21.5'
 // include ':forge-1.21.3'
@@ -88,7 +86,6 @@ project(':bukkit-helper').projectDir = "$rootDir/bukkit-helper" as File
 project(':dynmap-api').projectDir = "$rootDir/dynmap-api" as File
 project(':DynmapCore').projectDir = "$rootDir/DynmapCore" as File
 project(':DynmapCoreAPI').projectDir = "$rootDir/DynmapCoreAPI" as File
-// Fabric module directories commented out
 // project(':fabric-1.21.1').projectDir = "$rootDir/fabric-1.21.1" as File
 // project(':fabric-1.21.3').projectDir = "$rootDir/fabric-1.21.3" as File
 // project(':fabric-1.21.5').projectDir = "$rootDir/fabric-1.21.5" as File
@@ -101,7 +98,6 @@ project(':DynmapCoreAPI').projectDir = "$rootDir/DynmapCoreAPI" as File
 // project(':fabric-1.16.4').projectDir = "$rootDir/fabric-1.16.4" as File
 // project(':fabric-1.15.2').projectDir = "$rootDir/fabric-1.15.2" as File
 // project(':fabric-1.14.4').projectDir = "$rootDir/fabric-1.14.4" as File
-// Forge module directories commented out
 // project(':forge-1.21.6').projectDir = "$rootDir/forge-1.21.6" as File
 // project(':forge-1.21.5').projectDir = "$rootDir/forge-1.21.5" as File
 // project(':forge-1.21.3').projectDir = "$rootDir/forge-1.21.3" as File
