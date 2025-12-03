@@ -1,0 +1,78 @@
+buildscript {
+    repositories {
+        maven { url = 'https://files.minecraftforge.net/maven' }
+        jcenter()
+        mavenCentral()
+    }
+    dependencies {
+        classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '[6.0.24,6.2)', changing: true
+    }
+}
+apply plugin: 'net.minecraftforge.gradle'
+//apply plugin: 'com.github.johnrengelman.shadow'
+apply plugin: 'eclipse'
+
+eclipse {
+    project {
+        name = "Dynmap(Forge-1.21.10)"
+    }
+}
+
+sourceCompatibility = targetCompatibility = compileJava.sourceCompatibility = compileJava.targetCompatibility = JavaLanguageVersion.of(21) // Need this here so eclipse task generates correctly.
+
+println('Java: ' + System.getProperty('java.version') + ' JVM: ' + System.getProperty('java.vm.version') + '(' + System.getProperty('java.vendor') + ') Arch: ' + System.getProperty('os.arch'))
+
+ext.buildNumber = System.getenv().BUILD_NUMBER ?: "Dev"
+
+minecraft {
+    mappings channel: 'official', version: '1.21.10'
+    accessTransformer = file('src/main/resources/META-INF/accesstransformer.cfg')
+    reobf = false
+    copyIdeResources = true
+    runs {
+        server {
+            workingDirectory project.file('run').canonicalPath
+        }
+    }
+}
+
+project.archivesBaseName = "${project.archivesBaseName}-forge-1.21.10"
+
+dependencies {
+    implementation project(path: ":DynmapCore", configuration: "shadow")
+    implementation project(path: ':DynmapCoreAPI')
+
+    minecraft 'net.minecraftforge:forge:1.21.10-56.0.9'
+}
+
+processResources
+{
+    filesMatching('META-INF/mods.toml') {
+        // replace version and mcversion
+        expand(
+        	version: project.version + '-' + project.ext.buildNumber,
+        	mcversion: "1.21.10"
+    	)
+    }
+}
+
+shadowJar {
+    dependencies {
+        include(dependency(':DynmapCore'))
+        include(dependency("commons-codec:commons-codec:"))
+        exclude("META-INF/maven/**")
+        exclude("META-INF/services/**")
+    }
+	relocate('org.apache.commons.codec', 'org.dynmap.forge_1_21_10.commons.codec')
+
+    archiveBaseName = "Dynmap"
+    archiveClassifier = "forge-1.21.10"
+    destinationDirectory = file '../target'
+}
+
+shadowJar.doLast {
+    task ->
+        ant.checksum file: task.archivePath
+}
+
+build.dependsOn(shadowJar)
