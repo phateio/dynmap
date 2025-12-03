@@ -19,12 +19,14 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      - name: Build Spigot 1.21.10 with BuildTools
-        uses: SpraxDev/Action-SpigotMC@v5
-        with:
-          versions: 1.21.10
-          generateSrc: false
-          generateDoc: false
+      - name: Build Spigot with BuildTools
+        run: |
+          mkdir -p buildtools
+          cd buildtools
+          wget https://hub.spigotmc.org/jenkins/job/BuildTools/lastSuccessfulBuild/artifact/target/BuildTools.jar
+          java -jar BuildTools.jar --rev 1.21.10 --remapped
+          cd ..
+        timeout-minutes: 30
 
       - name: Build with Gradle
         env:
@@ -38,7 +40,7 @@ jobs:
           JAR_FILE=$(ls target/*.jar | grep 'spigot' | tail -n 1)
           echo "jar_file=$JAR_FILE" >> $GITHUB_OUTPUT
           echo "jar_name=$(basename $JAR_FILE)" >> $GITHUB_OUTPUT
-  
+
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
         env:
