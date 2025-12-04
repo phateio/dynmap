@@ -101,7 +101,22 @@ public class BukkitVersionHelperSpigot121_10 extends BukkitVersionHelper {
 
 	private static IRegistry<BiomeBase> getBiomeReg() {
 		if (reg == null) {
-			reg = MinecraftServer.getServer().ba().f(Registries.aK);
+			try {
+				// Try Mojang mappings first (Paper 1.20.5+)
+				reg = MinecraftServer.getServer().registryAccess().lookupOrThrow(Registries.BIOME);
+			} catch (NoSuchMethodError e) {
+				// Fall back to obfuscated names for non-Paper Spigot
+				try {
+					// v1_21_R6 obfuscated method names
+					reg = (IRegistry<BiomeBase>) MinecraftServer.getServer().getClass()
+						.getMethod("bc").invoke(MinecraftServer.getServer()).getClass()
+						.getMethod("f", net.minecraft.resources.ResourceKey.class)
+						.invoke(MinecraftServer.getServer().getClass().getMethod("bc").invoke(MinecraftServer.getServer()), Registries.aK);
+				} catch (Exception ex) {
+					Log.severe("Failed to get biome registry", ex);
+					throw new RuntimeException("Cannot access biome registry", ex);
+				}
+			}
 		}
 		return reg;
 	}
