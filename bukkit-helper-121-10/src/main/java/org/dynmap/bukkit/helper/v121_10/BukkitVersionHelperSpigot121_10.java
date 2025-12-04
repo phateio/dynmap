@@ -27,6 +27,7 @@ import net.minecraft.core.RegistryBlockID;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.core.IRegistry;
+import net.minecraft.core.IRegistryCustom;
 import net.minecraft.nbt.NBTTagByteArray;
 import net.minecraft.nbt.NBTTagByte;
 import net.minecraft.nbt.NBTTagCompound;
@@ -103,19 +104,11 @@ public class BukkitVersionHelperSpigot121_10 extends BukkitVersionHelper {
 		if (reg == null) {
 			try {
 				// Try Mojang mappings first (Paper 1.20.5+)
-				reg = MinecraftServer.getServer().registryAccess().lookupOrThrow(Registries.BIOME);
+				IRegistryCustom registryAccess = MinecraftServer.getServer().bc(); // registryAccess()
+				reg = registryAccess.f(Registries.aK); // lookupOrThrow(Registries.BIOME)
 			} catch (NoSuchMethodError e) {
-				// Fall back to obfuscated names for non-Paper Spigot
-				try {
-					// v1_21_R6 obfuscated method names
-					reg = (IRegistry<BiomeBase>) MinecraftServer.getServer().getClass()
-						.getMethod("bc").invoke(MinecraftServer.getServer()).getClass()
-						.getMethod("f", net.minecraft.resources.ResourceKey.class)
-						.invoke(MinecraftServer.getServer().getClass().getMethod("bc").invoke(MinecraftServer.getServer()), Registries.aK);
-				} catch (Exception ex) {
-					Log.severe("Failed to get biome registry", ex);
-					throw new RuntimeException("Cannot access biome registry", ex);
-				}
+				Log.severe("Failed to get biome registry - method not found", e);
+				throw new RuntimeException("Cannot access biome registry", e);
 			}
 		}
 		return reg;
