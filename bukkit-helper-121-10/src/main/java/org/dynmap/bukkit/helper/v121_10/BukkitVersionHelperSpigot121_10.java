@@ -354,28 +354,28 @@ public class BukkitVersionHelperSpigot121_10 extends BukkitVersionHelper {
 		Tag val = rec.get(field);
 		if(val == null) return null;
 		if(val instanceof ByteTag) {
-			return ((ByteTag)val).getAsByte();
+			return ((ByteTag)val).byteValue();
 		}
 		else if(val instanceof ShortTag) {
-			return ((ShortTag)val).getAsShort();
+			return ((ShortTag)val).shortValue();
 		}
 		else if(val instanceof IntTag) {
-			return ((IntTag)val).getAsInt();
+			return ((IntTag)val).intValue();
 		}
 		else if(val instanceof LongTag) {
-			return ((LongTag)val).getAsLong();
+			return ((LongTag)val).longValue();
 		}
 		else if(val instanceof FloatTag) {
-			return ((FloatTag)val).getAsFloat();
+			return ((FloatTag)val).floatValue();
 		}
 		else if(val instanceof DoubleTag) {
-			return ((DoubleTag)val).getAsDouble();
+			return ((DoubleTag)val).doubleValue();
 		}
 		else if(val instanceof ByteArrayTag) {
 			return ((ByteArrayTag)val).getAsByteArray();
 		}
 		else if(val instanceof StringTag) {
-			return ((StringTag)val).getAsString();
+			return val.asString().orElse("");
 		}
 		else if(val instanceof IntArrayTag) {
 			return ((IntArrayTag)val).getAsIntArray();
@@ -406,7 +406,7 @@ public class BukkitVersionHelperSpigot121_10 extends BukkitVersionHelper {
 		CraftPlayer cp = (CraftPlayer)player;
 		GameProfile profile = cp.getProfile();
 		if (profile != null) {
-			PropertyMap pm = profile.getProperties();
+			PropertyMap pm = profile.properties();
 			if (pm != null) {
 				Collection<Property> txt = pm.get("textures");
 				Property textureProperty = Iterables.getFirst(pm.get("textures"), null);

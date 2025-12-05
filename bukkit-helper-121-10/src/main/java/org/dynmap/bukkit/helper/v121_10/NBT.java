@@ -97,7 +97,7 @@ public class NBT {
 		@Override
 		public String getAsString(String s) {
 			Tag tag = obj.get(s);
-			return tag != null ? tag.getAsString() : "";
+			return tag != null ? tag.asString().orElse("") : "";
 		}
 		@Override
 		public GenericBitStorage makeBitStorage(int bits, int count, long[] data) {
