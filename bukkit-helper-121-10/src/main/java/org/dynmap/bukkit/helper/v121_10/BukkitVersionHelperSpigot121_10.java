@@ -420,7 +420,7 @@ public class BukkitVersionHelperSpigot121_10 extends BukkitVersionHelper {
 		CraftPlayer cp = (CraftPlayer)player;
 		GameProfile profile = cp.getProfile();
 		if (profile != null) {
-			PropertyMap pm = profile.getProperties();
+			PropertyMap pm = profile.properties();
 			if (pm != null) {
 				Collection<Property> txt = pm.get("textures");
 				Property textureProperty = Iterables.getFirst(pm.get("textures"), null);
