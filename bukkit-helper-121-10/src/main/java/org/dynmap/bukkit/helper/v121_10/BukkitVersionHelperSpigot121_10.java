@@ -102,7 +102,7 @@ public class BukkitVersionHelperSpigot121_10 extends BukkitVersionHelper {
 
 	private static Registry<Biome> getBiomeReg() {
 		if (reg == null) {
-			reg = MinecraftServer.getServer().registryAccess().lookupOrThrow(Registries.BIOME);
+			reg = MinecraftServer.getServer().registryAccess().registryOrThrow(Registries.BIOME);
 		}
 		return reg;
 	}
