@@ -31,6 +31,7 @@ include ':bukkit-helper-121-3'
 include ':bukkit-helper-121-4'
 include ':bukkit-helper-121-5'
 include ':bukkit-helper-121-6'
+include ':bukkit-helper-121-10'
 include ':bukkit-helper'
 include ':dynmap-api'
 include ':DynmapCore'
@@ -39,6 +40,7 @@ include ':DynmapCoreAPI'
 // include ':fabric-1.21.3'
 // include ':fabric-1.21.5'
 // include ':fabric-1.21.6'
+// include ':fabric-1.21.10'
 // include ':fabric-1.21'
 // include ':fabric-1.20.6'
 // include ':fabric-1.19.4'
@@ -48,6 +50,7 @@ include ':DynmapCoreAPI'
 // include ':fabric-1.15.2'
 // include ':fabric-1.14.4'
 // include ':forge-1.21.6'
+// include ':forge-1.21.10'
 // include ':forge-1.21.5'
 // include ':forge-1.21.3'
 // include ':forge-1.21'
@@ -82,6 +85,7 @@ project(':bukkit-helper-121-3').projectDir = "$rootDir/bukkit-helper-121-3" as F
 project(':bukkit-helper-121-4').projectDir = "$rootDir/bukkit-helper-121-4" as File
 project(':bukkit-helper-121-5').projectDir = "$rootDir/bukkit-helper-121-5" as File
 project(':bukkit-helper-121-6').projectDir = "$rootDir/bukkit-helper-121-6" as File
+project(':bukkit-helper-121-10').projectDir = "$rootDir/bukkit-helper-121-10" as File
 project(':bukkit-helper').projectDir = "$rootDir/bukkit-helper" as File
 project(':dynmap-api').projectDir = "$rootDir/dynmap-api" as File
 project(':DynmapCore').projectDir = "$rootDir/DynmapCore" as File
@@ -90,6 +94,7 @@ project(':DynmapCoreAPI').projectDir = "$rootDir/DynmapCoreAPI" as File
 // project(':fabric-1.21.3').projectDir = "$rootDir/fabric-1.21.3" as File
 // project(':fabric-1.21.5').projectDir = "$rootDir/fabric-1.21.5" as File
 // project(':fabric-1.21.6').projectDir = "$rootDir/fabric-1.21.6" as File
+// project(':fabric-1.21.10').projectDir = "$rootDir/fabric-1.21.10" as File
 // project(':fabric-1.21').projectDir = "$rootDir/fabric-1.21" as File
 // project(':fabric-1.20.6').projectDir = "$rootDir/fabric-1.20.6" as File
 // project(':fabric-1.19.4').projectDir = "$rootDir/fabric-1.19.4" as File
@@ -99,6 +104,7 @@ project(':DynmapCoreAPI').projectDir = "$rootDir/DynmapCoreAPI" as File
 // project(':fabric-1.15.2').projectDir = "$rootDir/fabric-1.15.2" as File
 // project(':fabric-1.14.4').projectDir = "$rootDir/fabric-1.14.4" as File
 // project(':forge-1.21.6').projectDir = "$rootDir/forge-1.21.6" as File
+// project(':forge-1.21.10').projectDir = "$rootDir/forge-1.21.10" as File
 // project(':forge-1.21.5').projectDir = "$rootDir/forge-1.21.5" as File
 // project(':forge-1.21.3').projectDir = "$rootDir/forge-1.21.3" as File
 // project(':forge-1.21').projectDir = "$rootDir/forge-1.21" as File
