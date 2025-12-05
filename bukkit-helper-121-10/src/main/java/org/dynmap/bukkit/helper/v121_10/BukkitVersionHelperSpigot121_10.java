@@ -46,6 +46,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
 
 import java.nio.charset.StandardCharsets;
@@ -320,7 +321,7 @@ public class BukkitVersionHelperSpigot121_10 extends BukkitVersionHelper {
 
 	@Override
 	public Map<?, ?> getTileEntitiesForChunk(Chunk c) {
-		return ((CraftChunk)c).getHandle(ChunkStatus.FULL).getBlockEntities();
+		return ((LevelChunk)((CraftChunk)c).getHandle(ChunkStatus.FULL)).getBlockEntities();
 	}
 
 	@Override
