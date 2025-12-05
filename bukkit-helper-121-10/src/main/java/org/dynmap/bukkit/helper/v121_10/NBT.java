@@ -20,7 +20,7 @@ public class NBT {
 		}
 		@Override
 		public Set<String> getAllKeys() {
-			return obj.getAllKeys();
+			return obj.keySet();
 		}
 		@Override
 		public boolean contains(String s) {
