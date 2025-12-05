@@ -102,14 +102,7 @@ public class BukkitVersionHelperSpigot121_10 extends BukkitVersionHelper {
 
 	private static IRegistry<BiomeBase> getBiomeReg() {
 		if (reg == null) {
-			try {
-				// Try Mojang mappings first (Paper 1.20.5+)
-				IRegistryCustom registryAccess = MinecraftServer.getServer().bc(); // registryAccess()
-				reg = registryAccess.f(Registries.aK); // lookupOrThrow(Registries.BIOME)
-			} catch (NoSuchMethodError e) {
-				Log.severe("Failed to get biome registry - method not found", e);
-				throw new RuntimeException("Cannot access biome registry", e);
-			}
+			reg = MinecraftServer.getServer().bg().f(Registries.aN); // registryAccess().lookupOrThrow(Registries.BIOME)
 		}
 		return reg;
 	}
@@ -340,26 +333,26 @@ public class BukkitVersionHelperSpigot121_10 extends BukkitVersionHelper {
 	@Override
 	public int getTileEntityX(Object te) {
 		TileEntity tileent = (TileEntity) te;
-		return tileent.aA_().u(); // TileEntity.getBlockPos ; Vec3i.getX
+		return tileent.aD_().u(); // TileEntity.getBlockPos ; Vec3i.getX
 	}
 
 	@Override
 	public int getTileEntityY(Object te) {
 		TileEntity tileent = (TileEntity) te;
-		return tileent.aA_().v(); // TileEntity.getBlockPos ; Vec3i.getY
+		return tileent.aD_().v(); // TileEntity.getBlockPos ; Vec3i.getY
 	}
 
 	@Override
 	public int getTileEntityZ(Object te) {
 		TileEntity tileent = (TileEntity) te;
-		return tileent.aA_().w(); // TileEntity.getBlockPos ; Vec3i.getZ
+		return tileent.aD_().w(); // TileEntity.getBlockPos ; Vec3i.getZ
 	}
 
 	@Override
 	public Object readTileEntityNBT(Object te, World w) {
 		TileEntity tileent = (TileEntity) te;
 		CraftWorld cw = (CraftWorld) w;
-		return tileent.d(cw.getHandle().K_()); // TileEntity.saveCustomOnly ; LevelReader.registryAccess
+		return tileent.d(cw.getHandle().L_()); // TileEntity.saveCustomOnly ; LevelReader.registryAccess
 	}
 
 	@Override

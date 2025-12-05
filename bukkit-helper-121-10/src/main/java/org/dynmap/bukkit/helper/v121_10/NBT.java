@@ -98,7 +98,7 @@ public class NBT {
 		}
 		@Override
 		public String getAsString(String s) {
-			return obj.a(s).p_().orElseGet(() -> ""); // CompoundTag.get ; Tag.asString
+			return obj.a(s).r_().orElseGet(() -> ""); // CompoundTag.get ; Tag.asString
 		}
 		@Override
 		public GenericBitStorage makeBitStorage(int bits, int count, long[] data) {
