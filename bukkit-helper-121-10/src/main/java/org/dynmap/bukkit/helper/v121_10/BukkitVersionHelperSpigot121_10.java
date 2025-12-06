@@ -100,10 +100,9 @@ public class BukkitVersionHelperSpigot121_10 extends BukkitVersionHelper {
 
 	private static Registry<Biome> reg = null;
 
-	@SuppressWarnings("unchecked")
 	private static Registry<Biome> getBiomeReg() {
 		if (reg == null) {
-			reg = (Registry<Biome>) MinecraftServer.getServer().registryAccess().lookupOrThrow(Registries.BIOME);
+			reg = MinecraftServer.getServer().registryAccess().registry(Registries.BIOME).orElseThrow();
 		}
 		return reg;
 	}
