@@ -37,7 +37,6 @@ import net.minecraft.nbt.IntTag;
 import net.minecraft.nbt.LongTag;
 import net.minecraft.nbt.ShortTag;
 import net.minecraft.nbt.StringTag;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.nbt.Tag;
 import net.minecraft.server.MinecraftServer;
@@ -100,7 +99,6 @@ public class BukkitVersionHelperSpigot121_10 extends BukkitVersionHelper {
 	}
 
 	private static Registry<Biome> reg = null;
-	private static Map<Biome, ResourceLocation> biomeKeyMap = null;
 
 	@SuppressWarnings("unchecked")
 	private static Registry<Biome> getBiomeReg() {
@@ -110,31 +108,8 @@ public class BukkitVersionHelperSpigot121_10 extends BukkitVersionHelper {
 		return reg;
 	}
 
-	private static void buildBiomeKeyMap() {
-		if (biomeKeyMap == null) {
-			biomeKeyMap = new IdentityHashMap<>();
-			// Build map by iterating through Bukkit biomes and looking up NMS biomes by key
-			var lookup = MinecraftServer.getServer().registryAccess().lookup(Registries.BIOME).orElseThrow();
-			for (org.bukkit.block.Biome bukkitBiome : org.bukkit.Registry.BIOME) {
-				try {
-					org.bukkit.NamespacedKey key = bukkitBiome.getKey();
-					if (key != null) {
-						ResourceLocation loc = ResourceLocation.parse(key.toString());
-						ResourceKey<Biome> resourceKey = ResourceKey.create(Registries.BIOME, loc);
-						lookup.get(resourceKey).ifPresent(holder -> {
-							biomeKeyMap.put(holder.value(), loc);
-						});
-					}
-				} catch (Exception e) {
-					// Skip on error
-				}
-			}
-		}
-	}
-
 	private static ResourceLocation getBiomeKey(Biome biome) {
-		buildBiomeKeyMap();
-		return biomeKeyMap.get(biome);
+		return getBiomeReg().getKey(biome);
 	}
 
 	private Object[] biomelist;
