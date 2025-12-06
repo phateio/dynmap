@@ -117,7 +117,7 @@ public class BukkitVersionHelperSpigot121_10 extends BukkitVersionHelper {
 			var lookup = MinecraftServer.getServer().registryAccess().lookup(Registries.BIOME).orElseThrow();
 			for (org.bukkit.block.Biome bukkitBiome : org.bukkit.Registry.BIOME) {
 				try {
-					org.bukkit.NamespacedKey key = org.bukkit.Registry.BIOME.getKey(bukkitBiome);
+					org.bukkit.NamespacedKey key = bukkitBiome.getKey();
 					if (key != null) {
 						ResourceLocation loc = ResourceLocation.parse(key.toString());
 						ResourceKey<Biome> resourceKey = ResourceKey.create(Registries.BIOME, loc);
