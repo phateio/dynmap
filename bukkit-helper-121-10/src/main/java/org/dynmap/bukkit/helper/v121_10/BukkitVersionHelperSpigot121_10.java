@@ -99,13 +99,27 @@ public class BukkitVersionHelperSpigot121_10 extends BukkitVersionHelper {
 	}
 
 	private static Registry<Biome> reg = null;
+	private static Map<Biome, ResourceLocation> biomeKeyMap = null;
 
 	@SuppressWarnings("unchecked")
 	private static Registry<Biome> getBiomeReg() {
 		if (reg == null) {
 			reg = (Registry<Biome>) MinecraftServer.getServer().registryAccess().lookup(Registries.BIOME).orElseThrow();
+			// Build biome to key map using listElements() since getKey() may not be available at runtime
+			biomeKeyMap = new IdentityHashMap<>();
+			MinecraftServer.getServer().registryAccess().lookup(Registries.BIOME).orElseThrow()
+				.listElements().forEach(holder -> {
+					biomeKeyMap.put(holder.value(), holder.key().location());
+				});
 		}
 		return reg;
+	}
+
+	private static ResourceLocation getBiomeKey(Biome biome) {
+		if (biomeKeyMap == null) {
+			getBiomeReg(); // Initialize
+		}
+		return biomeKeyMap.get(biome);
 	}
 
 	private Object[] biomelist;
@@ -290,11 +304,13 @@ public class BukkitVersionHelperSpigot121_10 extends BukkitVersionHelper {
 	@Override
 	/** Get ID string from biomebase */
 	public String getBiomeBaseIDString(Object bb) {
-		return getBiomeReg().getKey((Biome)bb).getPath();
+		ResourceLocation key = getBiomeKey((Biome)bb);
+		return key != null ? key.getPath() : "";
 	}
 	@Override
 	public String getBiomeBaseResourceLocsation(Object bb) {
-		return getBiomeReg().getKey((Biome)bb).toString();
+		ResourceLocation key = getBiomeKey((Biome)bb);
+		return key != null ? key.toString() : "";
 	}
 
 	@Override
