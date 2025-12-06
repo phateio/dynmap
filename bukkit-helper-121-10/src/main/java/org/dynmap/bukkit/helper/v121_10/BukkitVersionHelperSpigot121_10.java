@@ -26,7 +26,6 @@ import com.mojang.authlib.properties.PropertyMap;
 import net.minecraft.core.IdMapper;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.core.Registry;
 import net.minecraft.nbt.ByteArrayTag;
 import net.minecraft.nbt.ByteTag;
 import net.minecraft.nbt.CompoundTag;
@@ -98,18 +97,46 @@ public class BukkitVersionHelperSpigot121_10 extends BukkitVersionHelper {
 		return names.toArray(new String[0]);
 	}
 
-	private static Registry<Biome> reg = null;
+	private static Object biomeRegistry = null;
+	private static java.lang.reflect.Method getKeyMethod = null;
+	private static java.lang.reflect.Method getIdMethod = null;
+
+	private static Object getBiomeReg() {
+		if (biomeRegistry == null) {
+			biomeRegistry = MinecraftServer.getServer().registryAccess().lookup(Registries.BIOME).orElseThrow();
+			// Cache reflection methods
+			try {
+				getKeyMethod = biomeRegistry.getClass().getMethod("getKey", Object.class);
+				getIdMethod = biomeRegistry.getClass().getMethod("getId", Object.class);
+			} catch (Exception e) {
+				Log.severe("Failed to get biome registry methods: " + e.getMessage());
+			}
+		}
+		return biomeRegistry;
+	}
 
 	@SuppressWarnings("unchecked")
-	private static Registry<Biome> getBiomeReg() {
-		if (reg == null) {
-			reg = (Registry<Biome>) MinecraftServer.getServer().registryAccess().lookup(Registries.BIOME).orElseThrow();
+	private static Iterator<Biome> getBiomeIterator() {
+		return ((Iterable<Biome>) getBiomeReg()).iterator();
+	}
+
+	private static int getBiomeId(Biome biome) {
+		try {
+			getBiomeReg(); // ensure methods are cached
+			return (Integer) getIdMethod.invoke(biomeRegistry, biome);
+		} catch (Exception e) {
+			return -1;
 		}
-		return reg;
 	}
 
 	private static ResourceLocation getBiomeKey(Biome biome) {
-		return getBiomeReg().getKey(biome);
+		try {
+			getBiomeReg(); // ensure methods are cached
+			return (ResourceLocation) getKeyMethod.invoke(biomeRegistry, biome);
+		} catch (Exception e) {
+			Log.warning("Failed to get biome key: " + e.getMessage());
+			return null;
+		}
 	}
 
 	private Object[] biomelist;
@@ -120,10 +147,10 @@ public class BukkitVersionHelperSpigot121_10 extends BukkitVersionHelper {
 	public Object[] getBiomeBaseList() {
 		if (biomelist == null) {
 			biomelist = new Biome[256];
-			Iterator<Biome> iter = getBiomeReg().iterator();
+			Iterator<Biome> iter = getBiomeIterator();
 			while (iter.hasNext()) {
 				Biome b = iter.next();
-				int bidx = getBiomeReg().getId(b);
+				int bidx = getBiomeId(b);
 				if (bidx >= biomelist.length) {
 					biomelist = Arrays.copyOf(biomelist, bidx + biomelist.length);
 				}
@@ -136,7 +163,7 @@ public class BukkitVersionHelperSpigot121_10 extends BukkitVersionHelper {
 	/** Get ID from biomebase */
 	@Override
 	public int getBiomeBaseID(Object bb) {
-		return getBiomeReg().getId((Biome)bb);
+		return getBiomeId((Biome)bb);
 	}
 
 	public static IdentityHashMap<BlockState, DynmapBlockState> dataToState;
@@ -273,10 +300,10 @@ public class BukkitVersionHelperSpigot121_10 extends BukkitVersionHelper {
 	public String[] getBiomeNames() {
 		if (biomenames == null) {
 			biomenames = new String[256];
-			Iterator<Biome> iter = getBiomeReg().iterator();
+			Iterator<Biome> iter = getBiomeIterator();
 			while (iter.hasNext()) {
 				Biome b = iter.next();
-				int bidx = getBiomeReg().getId(b);
+				int bidx = getBiomeId(b);
 				if (bidx >= biomenames.length) {
 					biomenames = Arrays.copyOf(biomenames, bidx + biomenames.length);
 				}
