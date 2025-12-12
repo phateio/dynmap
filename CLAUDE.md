@@ -109,6 +109,24 @@ Build specific module (faster for development, but NOT suitable for PR submissio
 ./gradlew :spigot:build
 ```
 
+### Spigot BuildTools (for missing versions)
+
+If a bukkit-helper module fails because a Spigot version is not available in public Maven repositories, use BuildTools to build and install it locally:
+
+```bash
+mkdir -p buildtools && cd buildtools
+wget https://hub.spigotmc.org/jenkins/job/BuildTools/lastSuccessfulBuild/artifact/target/BuildTools.jar
+java -jar BuildTools.jar --rev <VERSION> --remapped
+cd ..
+```
+
+Example for Minecraft 1.21.10:
+```bash
+java -jar BuildTools.jar --rev 1.21.10 --remapped
+```
+
+This installs `org.spigotmc:spigot:<VERSION>-R0.1-SNAPSHOT:remapped-mojang` to your local Maven repository (`~/.m2/repository`).
+
 ### Build Output
 
 All artifacts are generated in `/target/` directory:
