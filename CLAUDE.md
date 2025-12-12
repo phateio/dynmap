@@ -127,6 +127,36 @@ java -jar BuildTools.jar --rev 1.21.10 --remapped
 
 This installs `org.spigotmc:spigot:<VERSION>-R0.1-SNAPSHOT:remapped-mojang` to your local Maven repository (`~/.m2/repository`).
 
+### Building in Claude.ai Sandbox Environment
+
+The Claude.ai sandbox uses an authenticated HTTP proxy that Java/Gradle cannot handle natively. Use the provided setup script:
+
+```bash
+# 1. Run the setup script (creates local auth proxy, configures Gradle)
+./setup-sandbox-build.sh
+
+# 2. Configure Maven proxy (required for BuildTools)
+mkdir -p ~/.m2
+cat > ~/.m2/settings.xml << 'EOF'
+<settings>
+  <proxies>
+    <proxy><active>true</active><protocol>http</protocol><host>127.0.0.1</host><port>3128</port></proxy>
+    <proxy><active>true</active><protocol>https</protocol><host>127.0.0.1</host><port>3128</port></proxy>
+  </proxies>
+</settings>
+EOF
+
+# 3. If BuildTools is needed, run with proxy parameters:
+java -Dhttp.proxyHost=127.0.0.1 -Dhttp.proxyPort=3128 \
+     -Dhttps.proxyHost=127.0.0.1 -Dhttps.proxyPort=3128 \
+     -jar BuildTools.jar --rev <VERSION> --remapped
+
+# 4. Build Dynmap
+./gradlew setup build
+```
+
+**Why this is needed:** The sandbox proxy requires preemptive Basic authentication, but Java's HttpURLConnection and Apache HttpClient don't support this. The setup script creates a local Python proxy (port 3128) that injects the authentication header.
+
 ### Build Output
 
 All artifacts are generated in `/target/` directory:
