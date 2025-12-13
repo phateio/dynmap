@@ -1,9 +1,9 @@
 package org.dynmap.bukkit.helper.v121_11;
 
 import org.bukkit.*;
-import org.bukkit.craftbukkit.v1_21_R6.CraftChunk;
-import org.bukkit.craftbukkit.v1_21_R6.CraftWorld;
-import org.bukkit.craftbukkit.v1_21_R6.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_21_R7.CraftChunk;
+import org.bukkit.craftbukkit.v1_21_R7.CraftWorld;
+import org.bukkit.craftbukkit.v1_21_R7.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 import org.dynmap.DynmapChunk;
 import org.dynmap.Log;
@@ -36,7 +36,7 @@ import net.minecraft.nbt.IntTag;
 import net.minecraft.nbt.LongTag;
 import net.minecraft.nbt.ShortTag;
 import net.minecraft.nbt.StringTag;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.nbt.Tag;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.tags.BlockTags;
@@ -87,7 +87,7 @@ public class BukkitVersionHelperSpigot121_11 extends BukkitVersionHelper {
 				baseb = b;
 				continue;
 			}
-			ResourceLocation id = BuiltInRegistries.BLOCK.getKey(b);
+			Identifier id = BuiltInRegistries.BLOCK.getKey(b);
 			String bn = id.toString();
 			if (bn != null) {
 				names.add(bn);
@@ -129,10 +129,10 @@ public class BukkitVersionHelperSpigot121_11 extends BukkitVersionHelper {
 		}
 	}
 
-	private static ResourceLocation getBiomeKey(Biome biome) {
+	private static Identifier getBiomeKey(Biome biome) {
 		try {
 			getBiomeReg(); // ensure methods are cached
-			return (ResourceLocation) getKeyMethod.invoke(biomeRegistry, biome);
+			return (Identifier) getKeyMethod.invoke(biomeRegistry, biome);
 		} catch (Exception e) {
 			Log.warning("Failed to get biome key: " + e.getMessage());
 			return null;
@@ -185,7 +185,7 @@ public class BukkitVersionHelperSpigot121_11 extends BukkitVersionHelper {
 		while (iter.hasNext()) {
 			BlockState bd = iter.next();
 			Block b = bd.getBlock();
-			ResourceLocation id = BuiltInRegistries.BLOCK.getKey(b);
+			Identifier id = BuiltInRegistries.BLOCK.getKey(b);
 			String bname = id.toString();
 			DynmapBlockState lastbs = lastBlockState.get(bname); // See if we have seen this one
 			int idx = 0;
@@ -321,12 +321,12 @@ public class BukkitVersionHelperSpigot121_11 extends BukkitVersionHelper {
 	@Override
 	/** Get ID string from biomebase */
 	public String getBiomeBaseIDString(Object bb) {
-		ResourceLocation key = getBiomeKey((Biome)bb);
+		Identifier key = getBiomeKey((Biome)bb);
 		return key != null ? key.getPath() : "";
 	}
 	@Override
 	public String getBiomeBaseResourceLocsation(Object bb) {
-		ResourceLocation key = getBiomeKey((Biome)bb);
+		Identifier key = getBiomeKey((Biome)bb);
 		return key != null ? key.toString() : "";
 	}
 
