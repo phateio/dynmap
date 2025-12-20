@@ -1,9 +1,6 @@
 package org.dynmap.bukkit.helper.v121_11;
 
 import org.bukkit.*;
-import org.bukkit.craftbukkit.v1_21_R7.CraftChunk;
-import org.bukkit.craftbukkit.v1_21_R7.CraftWorld;
-import org.bukkit.craftbukkit.v1_21_R7.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 import org.dynmap.DynmapChunk;
 import org.dynmap.Log;
@@ -23,6 +20,7 @@ import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.properties.Property;
 import com.mojang.authlib.properties.PropertyMap;
 
+import net.minecraft.core.HolderLookup;
 import net.minecraft.core.IdMapper;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
@@ -48,6 +46,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
 
+import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -64,6 +63,51 @@ import java.util.Map;
  * Helper for isolation of bukkit version specific issues
  */
 public class BukkitVersionHelperSpigot121_11 extends BukkitVersionHelper {
+
+	// CraftBukkit class references (loaded via reflection for Paper/Spigot compatibility)
+	private static Class<?> craftWorldClass;
+	private static Class<?> craftChunkClass;
+	private static Class<?> craftPlayerClass;
+	private static Class<?> craftServerClass;
+	private static Method craftWorldGetHandle;
+	private static Method craftWorldGetMinHeight;
+	private static Method craftChunkGetHandle;
+	private static Method craftPlayerGetProfile;
+	private static Method craftServerGetServer;
+	private static boolean initialized = false;
+
+	private static void initCraftBukkitClasses() {
+		if (initialized) return;
+		initialized = true;
+
+		// Try Paper's unversioned packages first, then fall back to Spigot's versioned packages
+		String[] packagePrefixes = {
+			"org.bukkit.craftbukkit",           // Paper 1.20.5+
+			"org.bukkit.craftbukkit.v1_21_R7"   // Spigot 1.21.11
+		};
+
+		for (String prefix : packagePrefixes) {
+			try {
+				craftWorldClass = Class.forName(prefix + ".CraftWorld");
+				craftChunkClass = Class.forName(prefix + ".CraftChunk");
+				craftPlayerClass = Class.forName(prefix + ".entity.CraftPlayer");
+				craftServerClass = Class.forName(prefix + ".CraftServer");
+
+				// Get methods
+				craftWorldGetHandle = craftWorldClass.getMethod("getHandle");
+				craftWorldGetMinHeight = craftWorldClass.getMethod("getMinHeight");
+				craftChunkGetHandle = craftChunkClass.getMethod("getHandle", ChunkStatus.class);
+				craftPlayerGetProfile = craftPlayerClass.getMethod("getProfile");
+				craftServerGetServer = craftServerClass.getMethod("getServer");
+
+				Log.info("[Dynmap] Using CraftBukkit package: " + prefix);
+				return;
+			} catch (ClassNotFoundException | NoSuchMethodException e) {
+				// Try next prefix
+			}
+		}
+		Log.severe("[Dynmap] Failed to find CraftBukkit classes!");
+	}
 
 	@Override
 	public boolean isUnsafeAsync() {
@@ -350,12 +394,26 @@ public class BukkitVersionHelperSpigot121_11 extends BukkitVersionHelper {
 
 	@Override
 	public long getInhabitedTicks(Chunk c) {
-		return ((CraftChunk)c).getHandle(ChunkStatus.FULL).getInhabitedTime();
+		initCraftBukkitClasses();
+		try {
+			Object handle = craftChunkGetHandle.invoke(c, ChunkStatus.FULL);
+			return ((LevelChunk)handle).getInhabitedTime();
+		} catch (Exception e) {
+			Log.warning("getInhabitedTicks failed: " + e.getMessage());
+			return 0;
+		}
 	}
 
 	@Override
 	public Map<?, ?> getTileEntitiesForChunk(Chunk c) {
-		return ((LevelChunk)((CraftChunk)c).getHandle(ChunkStatus.FULL)).getBlockEntities();
+		initCraftBukkitClasses();
+		try {
+			Object handle = craftChunkGetHandle.invoke(c, ChunkStatus.FULL);
+			return ((LevelChunk)handle).getBlockEntities();
+		} catch (Exception e) {
+			Log.warning("getTileEntitiesForChunk failed: " + e.getMessage());
+			return new HashMap<>();
+		}
 	}
 
 	@Override
@@ -378,9 +436,17 @@ public class BukkitVersionHelperSpigot121_11 extends BukkitVersionHelper {
 
 	@Override
 	public Object readTileEntityNBT(Object te, World w) {
-		BlockEntity blockent = (BlockEntity) te;
-		CraftWorld cw = (CraftWorld) w;
-		return blockent.saveCustomOnly(cw.getHandle().registryAccess());
+		initCraftBukkitClasses();
+		try {
+			BlockEntity blockent = (BlockEntity) te;
+			Object handle = craftWorldGetHandle.invoke(w);
+			Method registryAccess = handle.getClass().getMethod("registryAccess");
+			HolderLookup.Provider registry = (HolderLookup.Provider) registryAccess.invoke(handle);
+			return blockent.saveCustomOnly(registry);
+		} catch (Exception e) {
+			Log.warning("readTileEntityNBT failed: " + e.getMessage());
+			return null;
+		}
 	}
 
 	@Override
@@ -437,39 +503,48 @@ public class BukkitVersionHelperSpigot121_11 extends BukkitVersionHelper {
 	 */
 	@Override
 	public String getSkinURL(Player player) {
+		initCraftBukkitClasses();
 		String url = null;
-		CraftPlayer cp = (CraftPlayer)player;
-		GameProfile profile = cp.getProfile();
-		if (profile != null) {
-			PropertyMap pm = profile.properties();
-			if (pm != null) {
-				Collection<Property> txt = pm.get("textures");
-				Property textureProperty = Iterables.getFirst(pm.get("textures"), null);
-				if (textureProperty != null) {
-					String val = textureProperty.value();
-					if (val != null) {
-						TexturesPayload result = null;
-						try {
-							String json = new String(Base64.getDecoder().decode(val), StandardCharsets.UTF_8);
-							result = gson.fromJson(json, TexturesPayload.class);
-						} catch (JsonParseException e) {
-						} catch (IllegalArgumentException x) {
-							Log.warning("Malformed response from skin URL check: " + val);
-						}
-						if ((result != null) && (result.textures != null) && (result.textures.containsKey("SKIN"))) {
-							url = result.textures.get("SKIN").url;
+		try {
+			GameProfile profile = (GameProfile) craftPlayerGetProfile.invoke(player);
+			if (profile != null) {
+				PropertyMap pm = profile.properties();
+				if (pm != null) {
+					Collection<Property> txt = pm.get("textures");
+					Property textureProperty = Iterables.getFirst(pm.get("textures"), null);
+					if (textureProperty != null) {
+						String val = textureProperty.value();
+						if (val != null) {
+							TexturesPayload result = null;
+							try {
+								String json = new String(Base64.getDecoder().decode(val), StandardCharsets.UTF_8);
+								result = gson.fromJson(json, TexturesPayload.class);
+							} catch (JsonParseException e) {
+							} catch (IllegalArgumentException x) {
+								Log.warning("Malformed response from skin URL check: " + val);
+							}
+							if ((result != null) && (result.textures != null) && (result.textures.containsKey("SKIN"))) {
+								url = result.textures.get("SKIN").url;
+							}
 						}
 					}
 				}
 			}
+		} catch (Exception e) {
+			Log.warning("getSkinURL failed: " + e.getMessage());
 		}
 		return url;
 	}
 	// Get minY for world
 	@Override
 	public int getWorldMinY(World w) {
-		CraftWorld cw = (CraftWorld) w;
-		return cw.getMinHeight();
+		initCraftBukkitClasses();
+		try {
+			return (Integer) craftWorldGetMinHeight.invoke(w);
+		} catch (Exception e) {
+			Log.warning("getWorldMinY failed: " + e.getMessage());
+			return 0;
+		}
 	}
 	@Override
 	public boolean useGenericCache() {
