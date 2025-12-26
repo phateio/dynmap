@@ -25,8 +25,9 @@ jobs:
           cd buildtools
           wget https://hub.spigotmc.org/jenkins/job/BuildTools/lastSuccessfulBuild/artifact/target/BuildTools.jar
           java -jar BuildTools.jar --rev 1.21.10 --remapped
+          java -jar BuildTools.jar --rev 1.21.11 --remapped
           cd ..
-        timeout-minutes: 30
+        timeout-minutes: 45
 
       - name: Build with Gradle
         env:
