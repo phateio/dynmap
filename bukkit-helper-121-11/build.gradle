@@ -19,10 +19,5 @@ dependencies {
   implementation project(':dynmap-api')
   implementation project(path: ':DynmapCore', configuration: 'shadow')
   // Use paperweight dev bundle instead of manual BuildTools-built Spigot
-  // This provides access to NMS and CraftBukkit classes automatically
   paperweight.paperDevBundle("1.21.11-R0.1-SNAPSHOT")
 }
-
-// Configure reobfuscation for Spigot compatibility (production mappings)
-// Use getter method for Groovy DSL compatibility
-paperweight.reobfArtifactConfiguration = io.papermc.paperweight.userdev.ReobfArtifactConfiguration.getREOBF_PRODUCTION()

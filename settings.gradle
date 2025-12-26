@@ -9,7 +9,8 @@ pluginManagement {
 plugins {
   // Apply paperweight.userdev to root project with 'apply false' for multi-project builds
   // See: https://docs.papermc.io/paper/dev/userdev/
-  id 'io.papermc.paperweight.userdev' version '2.0.0-beta.19' apply false
+  // Using 1.7.7 for Gradle 8.x compatibility
+  id 'io.papermc.paperweight.userdev' version '1.7.7' apply false
 }
 
 rootProject.name = 'dynmap-common'
