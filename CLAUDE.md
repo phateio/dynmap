@@ -109,24 +109,6 @@ Build specific module (faster for development, but NOT suitable for PR submissio
 ./gradlew :spigot:build
 ```
 
-### Spigot BuildTools (for missing versions)
-
-If a bukkit-helper module fails because a Spigot version is not available in public Maven repositories, use BuildTools to build and install it locally:
-
-```bash
-mkdir -p buildtools && cd buildtools
-wget https://hub.spigotmc.org/jenkins/job/BuildTools/lastSuccessfulBuild/artifact/target/BuildTools.jar
-java -jar BuildTools.jar --rev <VERSION> --remapped
-cd ..
-```
-
-Example for Minecraft 1.21.10:
-```bash
-java -jar BuildTools.jar --rev 1.21.10 --remapped
-```
-
-This installs `org.spigotmc:spigot:<VERSION>-R0.1-SNAPSHOT:remapped-mojang` to your local Maven repository (`~/.m2/repository`).
-
 ### Building in Claude.ai Sandbox Environment
 
 The Claude.ai sandbox uses an authenticated HTTP proxy that Java/Gradle cannot handle natively. Use the provided setup script:
@@ -135,23 +117,7 @@ The Claude.ai sandbox uses an authenticated HTTP proxy that Java/Gradle cannot h
 # 1. Run the setup script (creates local auth proxy, configures Gradle)
 ./setup-sandbox-build.sh
 
-# 2. Configure Maven proxy (required for BuildTools)
-mkdir -p ~/.m2
-cat > ~/.m2/settings.xml << 'EOF'
-<settings>
-  <proxies>
-    <proxy><active>true</active><protocol>http</protocol><host>127.0.0.1</host><port>3128</port></proxy>
-    <proxy><active>true</active><protocol>https</protocol><host>127.0.0.1</host><port>3128</port></proxy>
-  </proxies>
-</settings>
-EOF
-
-# 3. If BuildTools is needed, run with proxy parameters:
-java -Dhttp.proxyHost=127.0.0.1 -Dhttp.proxyPort=3128 \
-     -Dhttps.proxyHost=127.0.0.1 -Dhttps.proxyPort=3128 \
-     -jar BuildTools.jar --rev <VERSION> --remapped
-
-# 4. Build Dynmap
+# 2. Build Dynmap
 ./gradlew setup build
 ```
 
