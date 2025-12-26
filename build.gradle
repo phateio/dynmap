@@ -1,5 +1,6 @@
 plugins {
-    id  "io.github.goooler.shadow" version "8.1.7"
+    // Shadow 9.x for Gradle 9 compatibility
+    id  "com.gradleup.shadow" version "9.0.0-beta4"
     id  'java'
     id  'maven-publish'
 }
@@ -49,14 +50,16 @@ ext {
 }
 
 subprojects {
-  apply plugin: "io.github.goooler.shadow"
+  apply plugin: "com.gradleup.shadow"
   apply plugin: 'java'
   apply plugin: 'maven-publish'
 
-  // Gradle 9 compatible way to set Java version
-  java {
-    sourceCompatibility = JavaVersion.VERSION_1_8
-    targetCompatibility = JavaVersion.VERSION_1_8
+  // Set Java version - paperweight modules define their own Java version
+  if (project.name != 'bukkit-helper-121-11' && project.name != 'bukkit-helper-121-10') {
+    java {
+      sourceCompatibility = JavaVersion.VERSION_1_8
+      targetCompatibility = JavaVersion.VERSION_1_8
+    }
   }
   tasks.withType(JavaCompile) {
   	options.encoding = 'UTF-8'

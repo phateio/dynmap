@@ -106,9 +106,9 @@ dependencies {
     implementation(project(':bukkit-helper-121-6')) {
         transitive = false
     }
-    implementation(project(':bukkit-helper-121-10')) {
-        transitive = false
-    }
+    // implementation(project(':bukkit-helper-121-10')) {  // TODO: needs reflection refactor
+    //     transitive = false
+    // }
     implementation(project(':bukkit-helper-121-11')) {
         transitive = false
     }
@@ -157,7 +157,7 @@ shadowJar {
         include(dependency(':bukkit-helper-121-4'))
         include(dependency(':bukkit-helper-121-5'))
         include(dependency(':bukkit-helper-121-6'))
-        include(dependency(':bukkit-helper-121-10'))
+        // include(dependency(':bukkit-helper-121-10'))  // TODO: needs reflection refactor
         include(dependency(':bukkit-helper-121-11'))
     }
     relocate('org.bstats', 'org.dynmap.bstats')
@@ -167,7 +167,7 @@ shadowJar {
 }
 shadowJar.doLast {
     task ->
-        ant.checksum file: task.archivePath
+        ant.checksum file: task.archiveFile.get().asFile
 }
 
 artifacts {

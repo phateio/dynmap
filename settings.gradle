@@ -9,8 +9,7 @@ pluginManagement {
 plugins {
   // Apply paperweight.userdev to root project with 'apply false' for multi-project builds
   // See: https://docs.papermc.io/paper/dev/userdev/
-  // Using 1.7.7 for Gradle 8.x compatibility
-  id 'io.papermc.paperweight.userdev' version '1.7.7' apply false
+  id 'io.papermc.paperweight.userdev' version '2.0.0-beta.19' apply false
 }
 
 rootProject.name = 'dynmap-common'
@@ -38,7 +37,7 @@ include ':bukkit-helper-121-3'
 include ':bukkit-helper-121-4'
 include ':bukkit-helper-121-5'
 include ':bukkit-helper-121-6'
-include ':bukkit-helper-121-10'
+// include ':bukkit-helper-121-10'  // TODO: needs reflection refactor for paperweight
 include ':bukkit-helper-121-11'
 include ':bukkit-helper'
 include ':dynmap-api'
@@ -93,7 +92,7 @@ project(':bukkit-helper-121-3').projectDir = "$rootDir/bukkit-helper-121-3" as F
 project(':bukkit-helper-121-4').projectDir = "$rootDir/bukkit-helper-121-4" as File
 project(':bukkit-helper-121-5').projectDir = "$rootDir/bukkit-helper-121-5" as File
 project(':bukkit-helper-121-6').projectDir = "$rootDir/bukkit-helper-121-6" as File
-project(':bukkit-helper-121-10').projectDir = "$rootDir/bukkit-helper-121-10" as File
+// project(':bukkit-helper-121-10').projectDir = "$rootDir/bukkit-helper-121-10" as File  // TODO: needs reflection refactor
 project(':bukkit-helper-121-11').projectDir = "$rootDir/bukkit-helper-121-11" as File
 project(':bukkit-helper').projectDir = "$rootDir/bukkit-helper" as File
 project(':dynmap-api').projectDir = "$rootDir/dynmap-api" as File
