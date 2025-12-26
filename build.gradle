@@ -27,14 +27,14 @@ allprojects  {
               includeGroup "io.github.linktosriram.s3lite"
           }
      }
+     // PaperMC repository for paperweight dev-bundle (must be before other repos)
+     maven { url "https://repo.papermc.io/repository/maven-public/" }
      maven { url "https://oss.sonatype.org/content/repositories/releases" }
      maven { url "https://oss.sonatype.org/content/repositories/snapshots" }
      maven { url "https://repo.mikeprimm.com" }
      maven { url "https://repo.maven.apache.org/maven2" }
      maven { url "https://hub.spigotmc.org/nexus/content/repositories/snapshots/" }
      maven { url "https://repo.codemc.org/repository/maven-public/" }
-     // PaperMC repository for paperweight dev-bundle
-     maven { url "https://repo.papermc.io/repository/maven-public/" }
   }
 
   apply plugin: 'java'
