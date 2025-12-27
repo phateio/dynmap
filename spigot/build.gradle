@@ -131,7 +131,8 @@ jar {
 
 shadowJar {
     dependencies {
-        include(dependency('org.bstats::'))
+        include(dependency('org.bstats:bstats-bukkit:.*'))
+        include(dependency('org.bstats:bstats-base:.*'))
         include(dependency(':dynmap-api'))
         include(dependency(":DynmapCore"))
         include(dependency(':bukkit-helper'))
