@@ -13,9 +13,7 @@ dependencies {
   implementation project(':dynmap-api')
   implementation project(path: ':DynmapCore', configuration: 'shadow')
   compileOnly group: 'org.spigotmc', name: 'spigot-api', version:'1.21.10-R0.1-SNAPSHOT'
-  // Spigot 1.20.5+ ships mojang-mapped by default; the `:remapped-mojang`
-  // classifier is no longer published by BuildTools.
-  compileOnly ('org.spigotmc:spigot:1.21.10-R0.1-SNAPSHOT') {
+  compileOnly ('org.spigotmc:spigot:1.21.10-R0.1-SNAPSHOT:remapped-mojang') {
     exclude group: "com.mojang", module: "jtracy"
   }
 }

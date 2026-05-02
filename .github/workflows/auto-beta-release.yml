@@ -80,35 +80,41 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      - name: Download BuildTools.jar
+      - name: Download BuildTools.jar (latest, for 26.1.2)
         run: |
           set -euxo pipefail
           mkdir -p buildtools
           cd buildtools
-          wget -nv https://hub.spigotmc.org/jenkins/job/BuildTools/lastSuccessfulBuild/artifact/target/BuildTools.jar
+          wget -nv -O BuildTools-latest.jar https://hub.spigotmc.org/jenkins/job/BuildTools/lastSuccessfulBuild/artifact/target/BuildTools.jar
+          # Older BuildTools build that still emits the :remapped-mojang classifier
+          # used by bukkit-helper-1.21.10/1.21.11. Build #189 dates from late 2025
+          # (Spigot 1.21.10/1.21.11 era).
+          wget -nv -O BuildTools-189.jar https://hub.spigotmc.org/jenkins/job/BuildTools/189/artifact/target/BuildTools.jar
           ls -la
 
-      - name: BuildTools Spigot 1.21.10 (Java 21)
+      - name: BuildTools Spigot 1.21.10 (Java 21, BuildTools #189)
         working-directory: buildtools
         env:
           JAVA21_HOME: ${{ env.JAVA_HOME_21_X64 }}
         run: |
           set -euxo pipefail
-          "$JAVA21_HOME/bin/java" -jar BuildTools.jar --rev 1.21.10 --remapped
-          ls -la "$HOME/.m2/repository/org/spigotmc/spigot/" || true
+          mkdir -p logs
+          "$JAVA21_HOME/bin/java" -jar BuildTools-189.jar --rev 1.21.10 --remapped 2>&1 | tee logs/buildtools-1.21.10.log
+          ls -la "$HOME/.m2/repository/org/spigotmc/spigot/1.21.10-R0.1-SNAPSHOT/" || true
         timeout-minutes: 30
 
-      - name: BuildTools Spigot 1.21.11 (Java 21)
+      - name: BuildTools Spigot 1.21.11 (Java 21, BuildTools #189)
         working-directory: buildtools
         env:
           JAVA21_HOME: ${{ env.JAVA_HOME_21_X64 }}
         run: |
           set -euxo pipefail
-          "$JAVA21_HOME/bin/java" -jar BuildTools.jar --rev 1.21.11 --remapped
-          ls -la "$HOME/.m2/repository/org/spigotmc/spigot/" || true
+          mkdir -p logs
+          "$JAVA21_HOME/bin/java" -jar BuildTools-189.jar --rev 1.21.11 --remapped 2>&1 | tee logs/buildtools-1.21.11.log
+          ls -la "$HOME/.m2/repository/org/spigotmc/spigot/1.21.11-R0.1-SNAPSHOT/" || true
         timeout-minutes: 30
 
-      - name: BuildTools Spigot 26.1.2 (Java 25)
+      - name: BuildTools Spigot 26.1.2 (Java 25, BuildTools latest)
         id: bt2612
         continue-on-error: true
         working-directory: buildtools
@@ -117,7 +123,7 @@ jobs:
         run: |
           set -uxo pipefail
           mkdir -p logs
-          "$JAVA25_HOME/bin/java" -jar BuildTools.jar --rev 26.1.2 --remapped 2>&1 | tee logs/buildtools-26.1.2.log
+          "$JAVA25_HOME/bin/java" -jar BuildTools-latest.jar --rev 26.1.2 --remapped 2>&1 | tee logs/buildtools-26.1.2.log
           rc=${PIPESTATUS[0]}
           {
             echo "## BuildTools 26.1.2 exit=$rc"
