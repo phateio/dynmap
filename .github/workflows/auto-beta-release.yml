@@ -80,38 +80,62 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      - name: Download BuildTools.jar (latest, for 26.1.2)
+      - name: Download BuildTools.jar
+        id: download_bt
+        continue-on-error: true
         run: |
-          set -euxo pipefail
-          mkdir -p buildtools
+          set -uxo pipefail
+          mkdir -p buildtools/logs
           cd buildtools
-          wget -nv -O BuildTools-latest.jar https://hub.spigotmc.org/jenkins/job/BuildTools/lastSuccessfulBuild/artifact/target/BuildTools.jar
-          # Older BuildTools build that still emits the :remapped-mojang classifier
-          # used by bukkit-helper-1.21.10/1.21.11. Build #189 dates from late 2025
-          # (Spigot 1.21.10/1.21.11 era).
-          wget -nv -O BuildTools-189.jar https://hub.spigotmc.org/jenkins/job/BuildTools/189/artifact/target/BuildTools.jar
+          # Latest BuildTools is needed for 26.1.2.
+          wget -nv -O BuildTools-latest.jar \
+            https://hub.spigotmc.org/jenkins/job/BuildTools/lastSuccessfulBuild/artifact/target/BuildTools.jar 2>&1 \
+            | tee logs/dl-latest.log
+          # Try older BuildTools build numbers that still emit the :remapped-mojang
+          # classifier for 1.21.x. We try a few until one downloads successfully.
+          for n in 196 195 194 193 192 191 190 189 188 187 186; do
+            url="https://hub.spigotmc.org/jenkins/job/BuildTools/$n/artifact/target/BuildTools.jar"
+            if wget -nv -O "BuildTools-$n.jar" "$url" 2>&1 | tee -a logs/dl-old.log; then
+              if [ -s "BuildTools-$n.jar" ]; then
+                ln -sf "BuildTools-$n.jar" BuildTools-old.jar
+                echo "old=$n" >> "$GITHUB_OUTPUT"
+                break
+              fi
+            fi
+            rm -f "BuildTools-$n.jar"
+          done
           ls -la
 
-      - name: BuildTools Spigot 1.21.10 (Java 21, BuildTools #189)
+      - name: BuildTools Spigot 1.21.10 (Java 21, older BuildTools)
+        id: bt121_10
+        continue-on-error: true
         working-directory: buildtools
         env:
           JAVA21_HOME: ${{ env.JAVA_HOME_21_X64 }}
         run: |
-          set -euxo pipefail
+          set -uxo pipefail
           mkdir -p logs
-          "$JAVA21_HOME/bin/java" -jar BuildTools-189.jar --rev 1.21.10 --remapped 2>&1 | tee logs/buildtools-1.21.10.log
-          ls -la "$HOME/.m2/repository/org/spigotmc/spigot/1.21.10-R0.1-SNAPSHOT/" || true
+          "$JAVA21_HOME/bin/java" -jar BuildTools-old.jar --rev 1.21.10 --remapped 2>&1 | tee logs/buildtools-1.21.10.log
+          rc=${PIPESTATUS[0]}
+          echo "rc=$rc" >> "$GITHUB_OUTPUT"
+          ls -la "$HOME/.m2/repository/org/spigotmc/spigot/1.21.10-R0.1-SNAPSHOT/" 2>&1 | tee -a logs/buildtools-1.21.10.log || true
+          exit 0
         timeout-minutes: 30
 
-      - name: BuildTools Spigot 1.21.11 (Java 21, BuildTools #189)
+      - name: BuildTools Spigot 1.21.11 (Java 21, older BuildTools)
+        id: bt121_11
+        continue-on-error: true
         working-directory: buildtools
         env:
           JAVA21_HOME: ${{ env.JAVA_HOME_21_X64 }}
         run: |
-          set -euxo pipefail
+          set -uxo pipefail
           mkdir -p logs
-          "$JAVA21_HOME/bin/java" -jar BuildTools-189.jar --rev 1.21.11 --remapped 2>&1 | tee logs/buildtools-1.21.11.log
-          ls -la "$HOME/.m2/repository/org/spigotmc/spigot/1.21.11-R0.1-SNAPSHOT/" || true
+          "$JAVA21_HOME/bin/java" -jar BuildTools-old.jar --rev 1.21.11 --remapped 2>&1 | tee logs/buildtools-1.21.11.log
+          rc=${PIPESTATUS[0]}
+          echo "rc=$rc" >> "$GITHUB_OUTPUT"
+          ls -la "$HOME/.m2/repository/org/spigotmc/spigot/1.21.11-R0.1-SNAPSHOT/" 2>&1 | tee -a logs/buildtools-1.21.11.log || true
+          exit 0
         timeout-minutes: 30
 
       - name: BuildTools Spigot 26.1.2 (Java 25, BuildTools latest)
@@ -186,18 +210,44 @@ jobs:
         if: always()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.repository.default_branch && '20' || '20' }}
         run: |
           set -uxo pipefail
           {
             echo "### Diagnostic for commit ${GITHUB_SHA::7}"
             echo
+            echo "Download BuildTools outcome: ${{ steps.download_bt.outcome }} (older build picked: ${{ steps.download_bt.outputs.old }})"
+            echo "BuildTools 1.21.10 outcome: ${{ steps.bt121_10.outcome }} (rc=${{ steps.bt121_10.outputs.rc }})"
+            echo "BuildTools 1.21.11 outcome: ${{ steps.bt121_11.outcome }} (rc=${{ steps.bt121_11.outputs.rc }})"
             echo "BuildTools 26.1.2 outcome: ${{ steps.bt2612.outcome }}"
             echo "Gradle outcome: ${{ steps.gradle_build.outcome }} (rc=${{ steps.gradle_build.outputs.rc }})"
             echo
-            echo "**BuildTools 26.1.2 log (last 80 lines):**"
+            echo "**Maven repo (org.spigotmc):**"
             echo '```'
-            tail -n 80 buildtools/logs/buildtools-26.1.2.log 2>/dev/null || echo "(log not produced)"
+            ls -la "$HOME/.m2/repository/org/spigotmc/spigot/" 2>&1 || true
+            for v in 1.21.10-R0.1-SNAPSHOT 1.21.11-R0.1-SNAPSHOT 26.1.2-R0.1-SNAPSHOT; do
+              echo "--- spigot/$v ---"
+              ls -la "$HOME/.m2/repository/org/spigotmc/spigot/$v/" 2>&1 || true
+            done
+            echo '```'
+            echo
+            echo "**Download log (tail 30):**"
+            echo '```'
+            tail -n 30 buildtools/logs/dl-old.log 2>/dev/null || true
+            echo '```'
+            echo
+            echo "**BuildTools 1.21.10 log (tail 60):**"
+            echo '```'
+            tail -n 60 buildtools/logs/buildtools-1.21.10.log 2>/dev/null || echo "(no log)"
+            echo '```'
+            echo
+            echo "**BuildTools 1.21.11 log (tail 60):**"
+            echo '```'
+            tail -n 60 buildtools/logs/buildtools-1.21.11.log 2>/dev/null || echo "(no log)"
+            echo '```'
+            echo
+            echo "**BuildTools 26.1.2 log (tail 30):**"
+            echo '```'
+            tail -n 30 buildtools/logs/buildtools-26.1.2.log 2>/dev/null || echo "(no log)"
             echo '```'
             echo
             echo "**Gradle log (last 200 lines):**"
@@ -205,12 +255,10 @@ jobs:
             tail -n 200 gradle-build.log 2>/dev/null || echo "(log not produced)"
             echo '```'
           } > pr_comment.md
-          # Comment on PR if one exists for this branch.
           PR=$(gh pr list --head "${GITHUB_REF_NAME}" --state open --json number --jq '.[0].number' || echo "")
           if [ -n "$PR" ]; then
             gh pr comment "$PR" --body-file pr_comment.md || true
           fi
-          # Now fail the job if Gradle failed.
           if [ "${{ steps.gradle_build.outputs.rc }}" != "0" ]; then
             echo "Gradle failed; failing job."
             exit 1
