@@ -247,7 +247,7 @@ public class BukkitVersionHelperSpigot26_1_2 extends BukkitVersionHelper {
 				int off2 = fname.indexOf(']');
 				sb = fname.substring(off1+1, off2);
 			}
-			int lightAtten = bd.getLightBlock();
+			int lightAtten = bd.getLightDampening();
 			// Fill in base attributes
 			bld.setBaseState(lastbs).setStateIndex(idx).setBlockName(bname).setStateName(sb).setAttenuatesLight(lightAtten);
 			if (bd.isSolid()) { bld.setSolid(); }

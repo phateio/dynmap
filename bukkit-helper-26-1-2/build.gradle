@@ -9,12 +9,19 @@ description = 'bukkit-helper-26.1.2'
 // MC 26.1+ requires Java 25.
 sourceCompatibility = targetCompatibility = compileJava.sourceCompatibility = compileJava.targetCompatibility = JavaLanguageVersion.of(25) // Need this here so eclipse task generates correctly.
 
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
+}
+
 dependencies {
   implementation project(':bukkit-helper')
   implementation project(':dynmap-api')
   implementation project(path: ':DynmapCore', configuration: 'shadow')
   compileOnly 'org.spigotmc:spigot-api:26.1.2-R0.1-SNAPSHOT'
-  compileOnly ('org.spigotmc:spigot:26.1.2-R0.1-SNAPSHOT:remapped-mojang') {
+  // MC 26.1+ ships with mojang-mapped names by default (no `remapped-mojang` classifier needed).
+  compileOnly ('org.spigotmc:spigot:26.1.2-R0.1-SNAPSHOT') {
     exclude group: "com.mojang", module: "jtracy"
   }
 }
