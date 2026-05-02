@@ -1,0 +1,57 @@
+name: Auto Beta Release
+
+on:
+  push:
+    branches:
+      - 'claude/upgrade-26.1.2-beta-**'
+
+permissions:
+  contents: write
+
+jobs:
+  tag-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Determine next beta tag
+        id: next_tag
+        run: |
+          set -euo pipefail
+          BASE="26.1.2-beta"
+          git fetch --tags --force
+          # Find highest existing 26.1.2-beta.N
+          HIGHEST=$(git tag -l "${BASE}.*" \
+            | sed -n "s/^${BASE}\.\([0-9]\+\)$/\1/p" \
+            | sort -n | tail -n 1 || true)
+          if [ -z "${HIGHEST}" ]; then
+            NEXT=1
+          else
+            NEXT=$((HIGHEST + 1))
+          fi
+          NEW_TAG="${BASE}.${NEXT}"
+          echo "tag=${NEW_TAG}" >> "$GITHUB_OUTPUT"
+          echo "Next tag: ${NEW_TAG}"
+
+      - name: Create tag
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "${{ steps.next_tag.outputs.tag }}" -m "Release ${{ steps.next_tag.outputs.tag }}"
+          git push origin "${{ steps.next_tag.outputs.tag }}"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ steps.next_tag.outputs.tag }}" \
+            --title "${{ steps.next_tag.outputs.tag }}" \
+            --notes "Automated beta release for Minecraft 26.1.2 support. Built from commit ${{ github.sha }}." \
+            --prerelease \
+            --target "${{ github.sha }}"

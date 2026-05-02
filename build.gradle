@@ -5,8 +5,8 @@
 buildscript {
     configurations.all {
         resolutionStrategy {
-            force("org.ow2.asm:asm:9.5")
-            force("org.ow2.asm:asm-commons:9.5")
+            force("org.ow2.asm:asm:9.8")
+            force("org.ow2.asm:asm-commons:9.8")
         }
     }
 }

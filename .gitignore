@@ -17,6 +17,9 @@
 # maven
 /target
 
+# BuildTools artifacts
+/buildtools/
+
 # vim
 .*.sw[a-p]
 
