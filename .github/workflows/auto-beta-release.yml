@@ -2,6 +2,8 @@ name: Auto Beta Release
 
 # Each push to the upgrade branch produces a new release tagged
 # 26.1.2-beta.<N>, where N auto-increments from the highest existing tag.
+# Also opens a PR back to the default branch on first push if one
+# doesn't exist yet.
 
 on:
   push:
@@ -14,6 +16,7 @@ concurrency:
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   build-and-release:
@@ -24,6 +27,25 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
+
+      - name: Ensure pull request exists
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_BRANCH: ${{ github.ref_name }}
+          BASE_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          existing=$(gh pr list --head "${HEAD_BRANCH}" --base "${BASE_BRANCH}" --state open --json number --jq 'length')
+          if [ "${existing}" = "0" ]; then
+            gh pr create \
+              --base "${BASE_BRANCH}" \
+              --head "${HEAD_BRANCH}" \
+              --title "feat: add Minecraft 26.1.2 support for Spigot/Paper" \
+              --body "$(printf '## Summary\n- Adds bukkit-helper-26-1-2 module modeled on 1.21.11 (compiled with Java 25, requires Spigot 26.1.2-R0.1-SNAPSHOT).\n- Routes (MC: 26.*) servers to the new helper in spigot/Helper.java.\n- Wires the new module into settings.gradle and spigot/build.gradle (impl + shadowJar include).\n- ci(release): bumps to JDK 25 and adds BuildTools 26.1.2.\n- ci(auto-beta-release): on each push, computes next 26.1.2-beta.<N> tag, builds, and publishes a GitHub Release with the spigot JAR.\n\n## Test plan\n- [ ] BuildTools resolves Spigot 26.1.2-R0.1-SNAPSHOT into the local Maven repository.\n- [ ] Gradle :spigot:build succeeds on JDK 25.\n- [ ] Auto-beta-release workflow tags 26.1.2-beta.1 and uploads the spigot jar.\n- [ ] Manual smoke test on a Paper/Spigot 26.1.2 server.')" \
+              --draft || true
+          else
+            echo "PR already exists for ${HEAD_BRANCH} -> ${BASE_BRANCH}; skipping."
+          fi
 
       - name: Compute next beta version
         id: version
