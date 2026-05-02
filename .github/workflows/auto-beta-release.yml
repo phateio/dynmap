@@ -21,12 +21,13 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Ensure pull request exists
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           BRANCH: ${{ github.ref_name }}
         run: |
-          set -euo pipefail
-          existing=$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number' || true)
+          set +e
+          existing=$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number')
           if [ -z "${existing:-}" ]; then
             gh pr create \
               --head "$BRANCH" \
