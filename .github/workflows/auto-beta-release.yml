@@ -80,21 +80,43 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      - name: Build Spigot with BuildTools
-        env:
-          JAVA21_HOME: ${{ env.JAVA_HOME_21_X64 }}
-          JAVA25_HOME: ${{ env.JAVA_HOME_25_X64 }}
+      - name: Download BuildTools.jar
         run: |
+          set -euxo pipefail
           mkdir -p buildtools
           cd buildtools
-          wget -q https://hub.spigotmc.org/jenkins/job/BuildTools/lastSuccessfulBuild/artifact/target/BuildTools.jar
-          # MC 1.21.10 / 1.21.11 build with Java 21
+          wget -nv https://hub.spigotmc.org/jenkins/job/BuildTools/lastSuccessfulBuild/artifact/target/BuildTools.jar
+          ls -la
+
+      - name: BuildTools Spigot 1.21.10 (Java 21)
+        working-directory: buildtools
+        env:
+          JAVA21_HOME: ${{ env.JAVA_HOME_21_X64 }}
+        run: |
+          set -euxo pipefail
           "$JAVA21_HOME/bin/java" -jar BuildTools.jar --rev 1.21.10 --remapped
+          ls -la "$HOME/.m2/repository/org/spigotmc/spigot/" || true
+        timeout-minutes: 30
+
+      - name: BuildTools Spigot 1.21.11 (Java 21)
+        working-directory: buildtools
+        env:
+          JAVA21_HOME: ${{ env.JAVA_HOME_21_X64 }}
+        run: |
+          set -euxo pipefail
           "$JAVA21_HOME/bin/java" -jar BuildTools.jar --rev 1.21.11 --remapped
-          # MC 26.1.2 requires Java 25
+          ls -la "$HOME/.m2/repository/org/spigotmc/spigot/" || true
+        timeout-minutes: 30
+
+      - name: BuildTools Spigot 26.1.2 (Java 25)
+        working-directory: buildtools
+        env:
+          JAVA25_HOME: ${{ env.JAVA_HOME_25_X64 }}
+        run: |
+          set -euxo pipefail
           "$JAVA25_HOME/bin/java" -jar BuildTools.jar --rev 26.1.2 --remapped
-          cd ..
-        timeout-minutes: 60
+          ls -la "$HOME/.m2/repository/org/spigotmc/spigot/" || true
+        timeout-minutes: 45
 
       - name: Build with Gradle
         env:
