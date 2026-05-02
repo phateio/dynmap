@@ -145,6 +145,8 @@ jobs:
           if-no-files-found: ignore
 
       - name: Build with Gradle
+        id: gradle_build
+        continue-on-error: true
         env:
           USERNAME: ${{ secrets.USERNAME }}
           TOKEN: ${{ secrets.TOKEN }}
@@ -155,6 +157,7 @@ jobs:
           ./gradlew :spigot:build --info \
             -Porg.gradle.java.installations.paths="${JAVA_HOME_25_X64},${JAVA_HOME_21_X64}" 2>&1 | tee gradle-build.log
           rc=${PIPESTATUS[0]}
+          echo "rc=$rc" >> "$GITHUB_OUTPUT"
           {
             echo "## Gradle exit=$rc"
             echo
@@ -162,7 +165,50 @@ jobs:
             tail -n 200 gradle-build.log
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
-          exit $rc
+          # Don't fail the job here so diagnostic comment can be posted.
+          exit 0
+
+      - name: Upload Gradle build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-build-log
+          path: gradle-build.log
+          if-no-files-found: ignore
+
+      - name: Post diagnostic PR comment
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.repository.default_branch && '20' || '20' }}
+        run: |
+          set -uxo pipefail
+          {
+            echo "### Diagnostic for commit ${GITHUB_SHA::7}"
+            echo
+            echo "BuildTools 26.1.2 outcome: ${{ steps.bt2612.outcome }}"
+            echo "Gradle outcome: ${{ steps.gradle_build.outcome }} (rc=${{ steps.gradle_build.outputs.rc }})"
+            echo
+            echo "**BuildTools 26.1.2 log (last 80 lines):**"
+            echo '```'
+            tail -n 80 buildtools/logs/buildtools-26.1.2.log 2>/dev/null || echo "(log not produced)"
+            echo '```'
+            echo
+            echo "**Gradle log (last 200 lines):**"
+            echo '```'
+            tail -n 200 gradle-build.log 2>/dev/null || echo "(log not produced)"
+            echo '```'
+          } > pr_comment.md
+          # Comment on PR if one exists for this branch.
+          PR=$(gh pr list --head "${GITHUB_REF_NAME}" --state open --json number --jq '.[0].number' || echo "")
+          if [ -n "$PR" ]; then
+            gh pr comment "$PR" --body-file pr_comment.md || true
+          fi
+          # Now fail the job if Gradle failed.
+          if [ "${{ steps.gradle_build.outputs.rc }}" != "0" ]; then
+            echo "Gradle failed; failing job."
+            exit 1
+          fi
 
       - name: Find JAR file
         id: find_jar
