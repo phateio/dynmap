@@ -1,0 +1,24 @@
+plugins {
+  id 'io.papermc.paperweight.userdev'
+}
+
+eclipse {
+    project {
+        name = "Dynmap(Spigot-26.1.2)"
+    }
+}
+
+description = 'bukkit-helper-26.1.2'
+
+// MC 26.1+ requires Java 25.
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(25)
+}
+
+dependencies {
+  implementation project(':bukkit-helper')
+  implementation project(':dynmap-api')
+  implementation project(path: ':DynmapCore', configuration: 'shadow')
+  // Use paperweight dev bundle (matches the pattern used by bukkit-helper-121-11).
+  paperweight.paperDevBundle("26.1.2-R0.1-SNAPSHOT")
+}
