@@ -9,7 +9,9 @@ pluginManagement {
 plugins {
   // Apply paperweight.userdev to root project with 'apply false' for multi-project builds
   // See: https://docs.papermc.io/paper/dev/userdev/
-  id 'io.papermc.paperweight.userdev' version '2.0.0-beta.19' apply false
+  id 'io.papermc.paperweight.userdev' version '2.0.0-beta.21' apply false
+  // Auto-download JDK toolchains (needed for Java 25 required by MC 26.1+)
+  id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
 }
 
 rootProject.name = 'dynmap-common'
@@ -39,6 +41,7 @@ include ':bukkit-helper-121-5'
 include ':bukkit-helper-121-6'
 // include ':bukkit-helper-121-10'  // TODO: needs reflection refactor for paperweight
 include ':bukkit-helper-121-11'
+include ':bukkit-helper-26-1-2'
 include ':bukkit-helper'
 include ':dynmap-api'
 include ':DynmapCore'
@@ -94,6 +97,7 @@ project(':bukkit-helper-121-5').projectDir = "$rootDir/bukkit-helper-121-5" as F
 project(':bukkit-helper-121-6').projectDir = "$rootDir/bukkit-helper-121-6" as File
 // project(':bukkit-helper-121-10').projectDir = "$rootDir/bukkit-helper-121-10" as File  // TODO: needs reflection refactor
 project(':bukkit-helper-121-11').projectDir = "$rootDir/bukkit-helper-121-11" as File
+project(':bukkit-helper-26-1-2').projectDir = "$rootDir/bukkit-helper-26-1-2" as File
 project(':bukkit-helper').projectDir = "$rootDir/bukkit-helper" as File
 project(':dynmap-api').projectDir = "$rootDir/dynmap-api" as File
 project(':DynmapCore').projectDir = "$rootDir/DynmapCore" as File

@@ -61,6 +61,11 @@ public class Helper {
             else if (v.contains("(MC: 1.21.")) {
                 BukkitVersionHelper.helper = loadVersionHelper("org.dynmap.bukkit.helper.v121_11.BukkitVersionHelperSpigot121_11");
             }
+            // Minecraft adopted year.drop.hotfix versioning starting with MC 26.1 (March 2026).
+            // Match all 26.x releases here so future hotfixes load the same helper until specialised.
+            else if (v.contains("(MC: 26.")) {
+                BukkitVersionHelper.helper = loadVersionHelper("org.dynmap.bukkit.helper.v26_1_2.BukkitVersionHelperSpigot26_1_2");
+            }
             else if (v.contains("(MC: 1.20)") || v.contains("(MC: 1.20.1)")) {
             	BukkitVersionHelper.helper = loadVersionHelper("org.dynmap.bukkit.helper.v120.BukkitVersionHelperSpigot120");
             }

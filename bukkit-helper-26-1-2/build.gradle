@@ -1,0 +1,30 @@
+plugins {
+  id 'io.papermc.paperweight.userdev'
+}
+
+eclipse {
+    project {
+        name = "Dynmap(Spigot-26.1.2)"
+    }
+}
+
+description = 'bukkit-helper-26.1.2'
+
+// Minecraft 26.1+ Paper requires Java 25 at runtime, so the userdev setup
+// (paperclip patching) needs to launch under Java 25 as well.
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(25)
+}
+
+dependencies {
+  implementation project(':bukkit-helper')
+  implementation project(':dynmap-api')
+  implementation project(path: ':DynmapCore', configuration: 'shadow')
+  // Paper publishes 26.1.2 dev bundles as "26.1.2.build.<N>-stable" (no -R0.1-SNAPSHOT for the new version scheme)
+  paperweight.paperDevBundle("26.1.2.build.57-stable")
+}
+
+// Paper 26.1+ ships Mojang-mapped at runtime and no longer provides reobf
+// mappings in the dev bundle. The shadow jar is what spigot consumes, so we
+// just disable the reobf task to keep `assemble` happy.
+tasks.named('reobfJar').configure { enabled = false }

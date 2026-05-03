@@ -1,0 +1,84 @@
+name: Auto Tag Beta
+
+# On every push to the Minecraft 26.1.2 upgrade branch:
+#   1. Compute the next 26.1.2-beta.N tag (max existing + 1; first run = beta.1).
+#   2. Sync the version in build.gradle so the produced jar carries the new tag.
+#   3. Commit the version bump back to the branch with [skip ci] so this
+#      workflow does not loop on its own commit.
+#   4. Create the tag and a GitHub Release; release.yml is then responsible
+#      for building the spigot jar and attaching it to the release.
+
+on:
+  push:
+    branches:
+      - claude/minecraft-26.1.2-upgrade-dTYWZ
+
+concurrency:
+  group: auto-tag-beta-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute next beta version
+        id: next
+        run: |
+          set -euo pipefail
+          git fetch --tags --force
+          LAST=$(git tag --list '26.1.2-beta.*' \
+            | sed -n 's/^26\.1\.2-beta\.\([0-9]\+\)$/\1/p' \
+            | sort -n | tail -n 1)
+          NEXT=$(( ${LAST:-0} + 1 ))
+          TAG="26.1.2-beta.${NEXT}"
+          echo "tag=${TAG}"  >> "$GITHUB_OUTPUT"
+          echo "Next tag: ${TAG}"
+
+      - name: Sync build.gradle version
+        run: |
+          set -euo pipefail
+          sed -i -E "s/^( *version *= *')[^']+(')/\1${{ steps.next.outputs.tag }}\2/" build.gradle
+          grep -E "^ *version *= *'" build.gradle
+
+      - name: Commit version bump
+        env:
+          TAG: ${{ steps.next.outputs.tag }}
+        run: |
+          set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if ! git diff --quiet -- build.gradle; then
+            git add build.gradle
+            git commit -m "chore(release): bump version to ${TAG} [skip ci]"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          else
+            echo "No version change to commit."
+          fi
+
+      - name: Create tag and GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG:      ${{ steps.next.outputs.tag }}
+        run: |
+          set -euo pipefail
+          # Tag the (possibly newly-pushed) HEAD of the branch
+          git fetch origin "${GITHUB_REF_NAME}"
+          SHA=$(git rev-parse "origin/${GITHUB_REF_NAME}")
+          git tag "${TAG}" "${SHA}"
+          git push origin "${TAG}"
+          gh release create "${TAG}" \
+            --title "Dynmap ${TAG}" \
+            --notes "Automated beta build for Minecraft 26.1.2 from commit ${SHA}." \
+            --prerelease \
+            --target "${SHA}"
