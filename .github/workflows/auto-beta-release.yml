@@ -122,7 +122,7 @@ jobs:
           exit 0
         timeout-minutes: 30
 
-      - name: BuildTools Spigot 1.21.11 (Java 21, older BuildTools)
+      - name: BuildTools Spigot 1.21.11 (Java 21, BuildTools latest)
         id: bt121_11
         continue-on-error: true
         working-directory: buildtools
@@ -131,7 +131,8 @@ jobs:
         run: |
           set -uxo pipefail
           mkdir -p logs
-          "$JAVA21_HOME/bin/java" -jar BuildTools-old.jar --rev 1.21.11 --remapped 2>&1 | tee logs/buildtools-1.21.11.log
+          # 1.21.11 needs toolsVersion 197+; older BuildTools refuses to build it.
+          "$JAVA21_HOME/bin/java" -jar BuildTools-latest.jar --rev 1.21.11 --remapped 2>&1 | tee logs/buildtools-1.21.11.log
           rc=${PIPESTATUS[0]}
           echo "rc=$rc" >> "$GITHUB_OUTPUT"
           ls -la "$HOME/.m2/repository/org/spigotmc/spigot/1.21.11-R0.1-SNAPSHOT/" 2>&1 | tee -a logs/buildtools-1.21.11.log || true
