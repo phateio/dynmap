@@ -40,7 +40,7 @@ public class MapChunkCache26_1_2 extends GenericMapChunkCache {
 	private static Method craftServerGetServer;
 	private static boolean initialized = false;
 
-	private static void initReflection() {
+	private static synchronized void initReflection() {
 		if (initialized) return;
 		initialized = true;
 

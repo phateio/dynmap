@@ -76,7 +76,7 @@ public class BukkitVersionHelperSpigot26_1_2 extends BukkitVersionHelper {
 	private static Method craftServerGetServer;
 	private static boolean initialized = false;
 
-	private static void initCraftBukkitClasses() {
+	private static synchronized void initCraftBukkitClasses() {
 		if (initialized) return;
 		initialized = true;
 
