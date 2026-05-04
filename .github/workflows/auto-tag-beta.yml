@@ -16,7 +16,7 @@ on:
       - 'claude/**'
 
 concurrency:
-  group: auto-tag-beta-${{ github.ref }}
+  group: auto-tag-beta
   cancel-in-progress: false
 
 permissions:
