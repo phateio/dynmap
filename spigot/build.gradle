@@ -112,7 +112,11 @@ dependencies {
     implementation(project(':bukkit-helper-121-11')) {
         transitive = false
     }
-    implementation(project(':bukkit-helper-26-1-2')) {
+    // bukkit-helper-26-1-2 is paperweight-based, but Paper 26.1+ has no reobf
+    // mappings, so its reobfJar is disabled. Force consumption of the plain
+    // runtime jar so its classes (org.dynmap.bukkit.helper.v26_1_2.*) make it
+    // into the shaded spigot jar instead of the empty `reobf` variant.
+    implementation(project(path: ':bukkit-helper-26-1-2', configuration: 'default')) {
         transitive = false
     }
 }
@@ -163,7 +167,7 @@ shadowJar {
         include(dependency(':bukkit-helper-121-6'))
         // include(dependency(':bukkit-helper-121-10'))  // TODO: needs reflection refactor
         include(dependency(':bukkit-helper-121-11'))
-        include(dependency(':bukkit-helper-26-1-2'))
+        include(dependency(':bukkit-helper-26-1-2:.*'))
     }
     relocate('org.bstats', 'org.dynmap.bstats')
     destinationDirectory = file '../target'

@@ -11,9 +11,27 @@ eclipse {
 description = 'bukkit-helper-26.1.2'
 
 // Minecraft 26.1+ Paper requires Java 25 at runtime, so the userdev setup
-// (paperclip patching) needs to launch under Java 25 as well.
+// (paperclip patching) needs to launch under Java 25 as well. The Shadow
+// plugin in this build runs on JDK 21 and cannot read Java 25 (major 69)
+// bytecode, so emit Java 21 bytecode here while keeping the Java 25 toolchain
+// for compilation against Paper's API. `options.release` (rather than
+// source/targetCompatibility) keeps the org.gradle.jvm.version attribute at
+// 25 so paper-api (which requires JVM 25) still resolves.
 java {
     toolchain.languageVersion = JavaLanguageVersion.of(25)
+}
+tasks.named('compileJava').configure {
+    options.release = 21
+}
+
+// `options.release = 21` would normally narrow the resolution attribute to
+// JVM 21, but paper-api 26.1.2 declares JVM 25 in its module metadata. Force
+// the consumer attribute back to 25 so dependency resolution succeeds; the
+// emitted bytecode is still Java 21 thanks to `--release`.
+[configurations.compileClasspath, configurations.runtimeClasspath].each { cfg ->
+    cfg.attributes {
+        attribute(TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE, 25)
+    }
 }
 
 dependencies {
@@ -24,7 +42,9 @@ dependencies {
   paperweight.paperDevBundle("26.1.2.build.57-stable")
 }
 
-// Paper 26.1+ ships Mojang-mapped at runtime and no longer provides reobf
-// mappings in the dev bundle. The shadow jar is what spigot consumes, so we
-// just disable the reobf task to keep `assemble` happy.
+// Paper 26.1+ ships Mojang-mapped at runtime; the dev bundle no longer
+// provides reobf-to-Spigot mappings, so the reobfJar task can't run. Disable
+// it. Consumers (spigot) must then pull from the `runtimeElements`
+// configuration explicitly because paperweight registers `reobf` as the
+// preferred runtime variant.
 tasks.named('reobfJar').configure { enabled = false }
