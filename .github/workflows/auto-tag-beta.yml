@@ -56,8 +56,12 @@ jobs:
             echo "Could not derive beta base from build.gradle" >&2
             exit 1
           fi
+          # Escape regex metacharacters in BASE before splicing it into sed
+          # below; the `.`s in e.g. "26.1.2-beta" would otherwise match any
+          # char and let stray tags like "26X1X2-beta.5" slip through.
+          BASE_RE=$(printf '%s' "${BASE}" | sed 's/[.[\^$*+?(){}|\\]/\\&/g')
           LAST=$(git tag --list "${BASE}.*" \
-            | sed -n "s/^${BASE}\.\([0-9]\+\)\$/\1/p" \
+            | sed -n "s/^${BASE_RE}\.\([0-9]\+\)\$/\1/p" \
             | sort -n | tail -n 1)
           NEXT=$(( ${LAST:-0} + 1 ))
           TAG="${BASE}.${NEXT}"
