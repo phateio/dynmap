@@ -13,7 +13,7 @@ name: Auto Tag Beta
 on:
   push:
     branches:
-      - claude/minecraft-26.1.2-upgrade-dTYWZ
+      - 'claude/**'
 
 concurrency:
   group: auto-tag-beta-${{ github.ref }}
