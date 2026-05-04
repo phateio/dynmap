@@ -63,6 +63,9 @@ public class Helper {
             }
             // Minecraft adopted year.drop.hotfix versioning starting with MC 26.1 (March 2026).
             // Match all 26.x releases here so future hotfixes load the same helper until specialised.
+            // NOTE: this is a prefix match. When a future MC 26.x release needs its own helper,
+            // add the more specific check (e.g. "(MC: 26.2.")) ABOVE this branch -- otherwise
+            // the new version will be swallowed by the fallback and load the wrong helper.
             else if (v.contains("(MC: 26.")) {
                 BukkitVersionHelper.helper = loadVersionHelper("org.dynmap.bukkit.helper.v26_1_2.BukkitVersionHelperSpigot26_1_2");
             }

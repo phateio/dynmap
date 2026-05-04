@@ -44,29 +44,22 @@ public class MapChunkCache26_1_2 extends GenericMapChunkCache {
 		if (initialized) return;
 		initialized = true;
 
-		// Try Paper's unversioned packages first, then fall back to Spigot's versioned packages
-		String[] packagePrefixes = {
-			"org.bukkit.craftbukkit",           // Paper 1.20.5+
-			"org.bukkit.craftbukkit.v1_21_R7"   // Spigot 26.1.2
-		};
+		// Paper 1.20.5+ uses unversioned org.bukkit.craftbukkit. See the matching
+		// note in BukkitVersionHelperSpigot26_1_2#initCraftBukkitClasses about
+		// why we don't carry a Spigot-versioned fallback here.
+		String prefix = "org.bukkit.craftbukkit";
+		try {
+			craftWorldClass = Class.forName(prefix + ".CraftWorld");
+			craftServerClass = Class.forName(prefix + ".CraftServer");
 
-		for (String prefix : packagePrefixes) {
-			try {
-				craftWorldClass = Class.forName(prefix + ".CraftWorld");
-				craftServerClass = Class.forName(prefix + ".CraftServer");
+			craftWorldGetHandle = craftWorldClass.getMethod("getHandle");
+			craftWorldIsChunkLoaded = craftWorldClass.getMethod("isChunkLoaded", int.class, int.class);
+			craftServerGetServer = craftServerClass.getMethod("getServer");
 
-				// Get methods
-				craftWorldGetHandle = craftWorldClass.getMethod("getHandle");
-				craftWorldIsChunkLoaded = craftWorldClass.getMethod("isChunkLoaded", int.class, int.class);
-				craftServerGetServer = craftServerClass.getMethod("getServer");
-
-				Log.info("[Dynmap] MapChunkCache using CraftBukkit package: " + prefix);
-				return;
-			} catch (ClassNotFoundException | NoSuchMethodException e) {
-				// Try next prefix
-			}
+			Log.info("[Dynmap] MapChunkCache using CraftBukkit package: " + prefix);
+		} catch (ClassNotFoundException | NoSuchMethodException e) {
+			Log.severe("[Dynmap] MapChunkCache failed to find CraftBukkit classes!");
 		}
-		Log.severe("[Dynmap] MapChunkCache failed to find CraftBukkit classes!");
 	}
 
 	private ServerLevel getServerLevel(World world) {

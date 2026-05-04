@@ -17,6 +17,10 @@ description = 'bukkit-helper-26.1.2'
 // for compilation against Paper's API. `options.release` (rather than
 // source/targetCompatibility) keeps the org.gradle.jvm.version attribute at
 // 25 so paper-api (which requires JVM 25) still resolves.
+//
+// FIXME: drop the toolchain-25 + release-21 + JVM-25-attribute dance once the
+// Shadow plugin can run on JDK 25 (Gradle would then run on 25 too and read
+// major-69 class files natively).
 java {
     toolchain.languageVersion = JavaLanguageVersion.of(25)
 }

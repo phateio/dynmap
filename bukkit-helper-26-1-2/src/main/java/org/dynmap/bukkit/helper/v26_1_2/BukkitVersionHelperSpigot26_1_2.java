@@ -68,45 +68,37 @@ public class BukkitVersionHelperSpigot26_1_2 extends BukkitVersionHelper {
 	private static Class<?> craftWorldClass;
 	private static Class<?> craftChunkClass;
 	private static Class<?> craftPlayerClass;
-	private static Class<?> craftServerClass;
 	private static Method craftWorldGetHandle;
 	private static Method craftWorldGetMinHeight;
 	private static Method craftChunkGetHandle;
 	private static Method craftPlayerGetProfile;
-	private static Method craftServerGetServer;
 	private static boolean initialized = false;
 
 	private static synchronized void initCraftBukkitClasses() {
 		if (initialized) return;
 		initialized = true;
 
-		// Try Paper's unversioned packages first, then fall back to Spigot's versioned packages
-		String[] packagePrefixes = {
-			"org.bukkit.craftbukkit",           // Paper 1.20.5+
-			"org.bukkit.craftbukkit.v1_21_R7"   // Spigot 26.1.2
-		};
+		// Paper 1.20.5+ uses unversioned org.bukkit.craftbukkit. We deliberately
+		// don't carry a Spigot-versioned fallback here: the real package name on
+		// Spigot 26.1.2 hasn't been verified, and a wrong fallback would mask
+		// the genuine ClassNotFoundException with a misleading "fell through to
+		// Spigot" path. If a Spigot-versioned helper is ever needed, add it
+		// after confirming the package against an actual Spigot 26.1.2 build.
+		String prefix = "org.bukkit.craftbukkit";
+		try {
+			craftWorldClass = Class.forName(prefix + ".CraftWorld");
+			craftChunkClass = Class.forName(prefix + ".CraftChunk");
+			craftPlayerClass = Class.forName(prefix + ".entity.CraftPlayer");
 
-		for (String prefix : packagePrefixes) {
-			try {
-				craftWorldClass = Class.forName(prefix + ".CraftWorld");
-				craftChunkClass = Class.forName(prefix + ".CraftChunk");
-				craftPlayerClass = Class.forName(prefix + ".entity.CraftPlayer");
-				craftServerClass = Class.forName(prefix + ".CraftServer");
+			craftWorldGetHandle = craftWorldClass.getMethod("getHandle");
+			craftWorldGetMinHeight = craftWorldClass.getMethod("getMinHeight");
+			craftChunkGetHandle = craftChunkClass.getMethod("getHandle", ChunkStatus.class);
+			craftPlayerGetProfile = craftPlayerClass.getMethod("getProfile");
 
-				// Get methods
-				craftWorldGetHandle = craftWorldClass.getMethod("getHandle");
-				craftWorldGetMinHeight = craftWorldClass.getMethod("getMinHeight");
-				craftChunkGetHandle = craftChunkClass.getMethod("getHandle", ChunkStatus.class);
-				craftPlayerGetProfile = craftPlayerClass.getMethod("getProfile");
-				craftServerGetServer = craftServerClass.getMethod("getServer");
-
-				Log.info("[Dynmap] Using CraftBukkit package: " + prefix);
-				return;
-			} catch (ClassNotFoundException | NoSuchMethodException e) {
-				// Try next prefix
-			}
+			Log.info("[Dynmap] Using CraftBukkit package: " + prefix);
+		} catch (ClassNotFoundException | NoSuchMethodException e) {
+			Log.severe("[Dynmap] Failed to find CraftBukkit classes!");
 		}
-		Log.severe("[Dynmap] Failed to find CraftBukkit classes!");
 	}
 
 	@Override
@@ -145,7 +137,7 @@ public class BukkitVersionHelperSpigot26_1_2 extends BukkitVersionHelper {
 	private static java.lang.reflect.Method getKeyMethod = null;
 	private static java.lang.reflect.Method getIdMethod = null;
 
-	private static Object getBiomeReg() {
+	private static synchronized Object getBiomeReg() {
 		if (biomeRegistry == null) {
 			biomeRegistry = MinecraftServer.getServer().registryAccess().lookup(Registries.BIOME).orElseThrow();
 			// Cache reflection methods
