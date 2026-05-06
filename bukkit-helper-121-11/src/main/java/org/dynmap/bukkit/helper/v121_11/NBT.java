@@ -6,33 +6,32 @@ import org.dynmap.common.chunk.GenericNBTList;
 
 import java.util.Optional;
 import java.util.Set;
-import net.minecraft.nbt.NBTBase;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.nbt.NBTTagList;
+import net.minecraft.nbt.Tag;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
 import net.minecraft.util.SimpleBitStorage;
 
 public class NBT {
 
 	public static class NBTCompound implements GenericNBTCompound {
-		private final NBTTagCompound obj;
-		public NBTCompound(NBTTagCompound t) {
+		private final CompoundTag obj;
+		public NBTCompound(CompoundTag t) {
 			this.obj = t;
 		}
 		@Override
 		public Set<String> getAllKeys() {
-			return obj.e(); // CompoundTag.keySet
+			return obj.keySet();
 		}
 		@Override
 		public boolean contains(String s) {
-			return obj.b(s); // CompoundTag.contains
+			return obj.contains(s);
 		}
 		@Override
 		public boolean contains(String s, int i) {
-			// Like contains, but with an extra constraint on type
-			NBTBase base = obj.a(s); // CompoundTag.get
+			Tag base = obj.get(s);
 			if (base == null)
 				return false;
-			byte type = base.b(); // CompoundTag.getId
+			byte type = base.getId();
 			if (type == i)
 				return true;
 			else if (i != TAG_ANY_NUMERIC)
@@ -42,55 +41,54 @@ public class NBT {
 		}
 		@Override
 		public byte getByte(String s) {
-			return obj.b(s, (byte)0); // CompoundTag.getByteOr
+			return obj.getByteOr(s, (byte)0);
 		}
 		@Override
 		public short getShort(String s) {
-			return obj.b(s, (short)0); // CompoundTag.getShortOr
+			return obj.getShortOr(s, (short)0);
 		}
 		@Override
 		public int getInt(String s) {
-			return obj.b(s, 0); // CompoundTag.getIntOr
+			return obj.getIntOr(s, 0);
 		}
 		@Override
 		public long getLong(String s) {
-			return obj.b(s, 0L); // CompoundTag.getLongOr
+			return obj.getLongOr(s, 0L);
 		}
 		@Override
 		public float getFloat(String s) {
-			return obj.b(s, 0.0f); // CompoundTag.getFloatOr
+			return obj.getFloatOr(s, 0.0f);
 		}
 		@Override
 		public double getDouble(String s) {
-			return obj.b(s, 0.0); // CompoundTag.getDoubleOr
+			return obj.getDoubleOr(s, 0.0);
 		}
 		@Override
 		public String getString(String s) {
-			return obj.b(s, ""); // CompoundTag.getStringOr
+			return obj.getStringOr(s, "");
 		}
 		@Override
 		public byte[] getByteArray(String s) {
-			Optional<byte[]> byteArr = obj.j(s); // CompoundTag.getByteArray
+			Optional<byte[]> byteArr = obj.getByteArray(s);
 			return byteArr.orElseGet(() -> new byte[0]);
 		}
 		@Override
 		public int[] getIntArray(String s) {
-			Optional<int[]> intArr = obj.k(s); // CompoundTag.getIntArray
+			Optional<int[]> intArr = obj.getIntArray(s);
 			return intArr.orElseGet(() -> new int[0]);
 		}
 		@Override
 		public long[] getLongArray(String s) {
-			Optional<long[]> longArr = obj.l(s); // CompoundTag.getLongArray
+			Optional<long[]> longArr = obj.getLongArray(s);
 			return longArr.orElseGet(() -> new long[0]);
 		}
 		@Override
 		public GenericNBTCompound getCompound(String s) {
-			return new NBTCompound(obj.n(s)); // CompoundTag.getCompoundOrEmpty
+			return new NBTCompound(obj.getCompoundOrEmpty(s));
 		}
 		@Override
 		public GenericNBTList getList(String s, int i) {
-			// i argument used to be used to constrain list type, but nbt lists no longer have types as of 1.21.5
-			return new NBTList(obj.p(s)); // CompoundTag.getListOrEmpty
+			return new NBTList(obj.getListOrEmpty(s));
 		}
 		@Override
 		public boolean getBoolean(String s) {
@@ -98,7 +96,8 @@ public class NBT {
 		}
 		@Override
 		public String getAsString(String s) {
-			return obj.a(s).p_().orElseGet(() -> ""); // CompoundTag.get ; Tag.asString
+			Tag tag = obj.get(s);
+			return tag != null ? tag.asString().orElse("") : "";
 		}
 		@Override
 		public GenericBitStorage makeBitStorage(int bits, int count, long[] data) {
@@ -110,8 +109,8 @@ public class NBT {
 	}
 
 	public static class NBTList implements GenericNBTList {
-		private final NBTTagList obj;
-		public NBTList(NBTTagList t) {
+		private final ListTag obj;
+		public NBTList(ListTag t) {
 			obj = t;
 		}
 		@Override
@@ -120,11 +119,11 @@ public class NBT {
 		}
 		@Override
 		public String getString(int idx) {
-			return obj.a(idx, ""); // ListTag.getStringOr
+			return obj.getStringOr(idx, "");
 		}
 		@Override
 		public GenericNBTCompound getCompound(int idx) {
-			return new NBTCompound(obj.b(idx)); // ListTag.getCompoundOrEmpty
+			return new NBTCompound(obj.getCompoundOrEmpty(idx));
 		}
 		public String toString() {
 			return obj.toString();
@@ -138,7 +137,7 @@ public class NBT {
 		}
 		@Override
 		public int get(int idx) {
-			return bs.a(idx);
+			return bs.get(idx);
 		}
 	}
 }
