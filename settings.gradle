@@ -2,8 +2,14 @@ pluginManagement {
   repositories {
     gradlePluginPortal()
     maven { url "https://maven.fabricmc.net/" }
-    maven { url "https://papermc.io/repo/repository/maven-public/" }
+    maven { url "https://repo.papermc.io/repository/maven-public/" }
   }
+}
+
+plugins {
+  // Apply paperweight.userdev to root project with 'apply false' for multi-project builds
+  // See: https://docs.papermc.io/paper/dev/userdev/
+  id 'io.papermc.paperweight.userdev' version '2.0.0-beta.19' apply false
 }
 
 rootProject.name = 'dynmap-common'
@@ -31,32 +37,38 @@ include ':bukkit-helper-121-3'
 include ':bukkit-helper-121-4'
 include ':bukkit-helper-121-5'
 include ':bukkit-helper-121-6'
-include ':bukkit-helper-121-10'
+// bukkit-helper-121-10 uses BuildTools-style spigot dep (org.bukkit.craftbukkit.v1_21_R6)
+// which paperweight's Mojang-mapped server jar does not provide. Disabled until the
+// helper is rewritten to use reflection like bukkit-helper-121-11.
+// include ':bukkit-helper-121-10'
 include ':bukkit-helper-121-11'
 include ':bukkit-helper'
 include ':dynmap-api'
 include ':DynmapCore'
 include ':DynmapCoreAPI'
-include ':fabric-1.21.6'
-include ':fabric-1.21.9-10'
-include ':fabric-1.21.11'
-include ':fabric-1.20.6'
-include ':fabric-1.19.4'
-include ':fabric-1.18.2'
-include ':fabric-1.17.1'
-include ':fabric-1.16.4'
-include ':fabric-1.15.2'
-include ':fabric-1.14.4'
-include ':forge-1.21.11'
-include ':forge-1.21.10'
-include ':forge-1.21.6'
-include ':forge-1.20.6'
-include ':forge-1.19.3'
-include ':forge-1.18.2'
-include ':forge-1.17.1'
-include ':forge-1.16.5'
-include ':forge-1.15.2'
-include ':forge-1.14.4'
+// Fabric/Forge modules are disabled because they rely on Gradle 8 APIs
+// (archivesBaseName, archivePath, etc.) that Gradle 9 removed. Re-enable
+// once Loom / ForgeGradle versions compatible with Gradle 9 are available.
+// include ':fabric-1.21.6'
+// include ':fabric-1.21.9-10'
+// include ':fabric-1.21.11'
+// include ':fabric-1.20.6'
+// include ':fabric-1.19.4'
+// include ':fabric-1.18.2'
+// include ':fabric-1.17.1'
+// include ':fabric-1.16.4'
+// include ':fabric-1.15.2'
+// include ':fabric-1.14.4'
+// include ':forge-1.21.11'
+// include ':forge-1.21.10'
+// include ':forge-1.21.6'
+// include ':forge-1.20.6'
+// include ':forge-1.19.3'
+// include ':forge-1.18.2'
+// include ':forge-1.17.1'
+// include ':forge-1.16.5'
+// include ':forge-1.15.2'
+// include ':forge-1.14.4'
 
 project(':spigot').projectDir = "$rootDir/spigot" as File
 project(':bukkit-helper-113-2').projectDir = "$rootDir/bukkit-helper-113-2" as File
@@ -81,30 +93,30 @@ project(':bukkit-helper-121-3').projectDir = "$rootDir/bukkit-helper-121-3" as F
 project(':bukkit-helper-121-4').projectDir = "$rootDir/bukkit-helper-121-4" as File
 project(':bukkit-helper-121-5').projectDir = "$rootDir/bukkit-helper-121-5" as File
 project(':bukkit-helper-121-6').projectDir = "$rootDir/bukkit-helper-121-6" as File
-project(':bukkit-helper-121-10').projectDir = "$rootDir/bukkit-helper-121-10" as File
+// project(':bukkit-helper-121-10').projectDir = "$rootDir/bukkit-helper-121-10" as File
 project(':bukkit-helper-121-11').projectDir = "$rootDir/bukkit-helper-121-11" as File
 project(':bukkit-helper').projectDir = "$rootDir/bukkit-helper" as File
 project(':dynmap-api').projectDir = "$rootDir/dynmap-api" as File
 project(':DynmapCore').projectDir = "$rootDir/DynmapCore" as File
 project(':DynmapCoreAPI').projectDir = "$rootDir/DynmapCoreAPI" as File
-project(':fabric-1.21.6').projectDir = "$rootDir/fabric-1.21.6" as File
-project(':fabric-1.21.9-10').projectDir = "$rootDir/fabric-1.21.9-10" as File
-project(':fabric-1.21.11').projectDir = "$rootDir/fabric-1.21.11" as File
-project(':fabric-1.20.6').projectDir = "$rootDir/fabric-1.20.6" as File
-project(':fabric-1.19.4').projectDir = "$rootDir/fabric-1.19.4" as File
-project(':fabric-1.18.2').projectDir = "$rootDir/fabric-1.18.2" as File
-project(':fabric-1.17.1').projectDir = "$rootDir/fabric-1.17.1" as File
-project(':fabric-1.16.4').projectDir = "$rootDir/fabric-1.16.4" as File
-project(':fabric-1.15.2').projectDir = "$rootDir/fabric-1.15.2" as File
-project(':fabric-1.14.4').projectDir = "$rootDir/fabric-1.14.4" as File
-project(':forge-1.21.11').projectDir = "$rootDir/forge-1.21.11" as File
-project(':forge-1.21.10').projectDir = "$rootDir/forge-1.21.10" as File
-project(':forge-1.21.6').projectDir = "$rootDir/forge-1.21.6" as File
-project(':forge-1.20.6').projectDir = "$rootDir/forge-1.20.6" as File
-project(':forge-1.19.3').projectDir = "$rootDir/forge-1.19.3" as File
-project(':forge-1.18.2').projectDir = "$rootDir/forge-1.18.2" as File
-project(':forge-1.17.1').projectDir = "$rootDir/forge-1.17.1" as File
-project(':forge-1.16.5').projectDir = "$rootDir/forge-1.16.5" as File
-project(':forge-1.15.2').projectDir = "$rootDir/forge-1.15.2" as File
-project(':forge-1.14.4').projectDir = "$rootDir/forge-1.14.4" as File
+// project(':fabric-1.21.6').projectDir = "$rootDir/fabric-1.21.6" as File
+// project(':fabric-1.21.9-10').projectDir = "$rootDir/fabric-1.21.9-10" as File
+// project(':fabric-1.21.11').projectDir = "$rootDir/fabric-1.21.11" as File
+// project(':fabric-1.20.6').projectDir = "$rootDir/fabric-1.20.6" as File
+// project(':fabric-1.19.4').projectDir = "$rootDir/fabric-1.19.4" as File
+// project(':fabric-1.18.2').projectDir = "$rootDir/fabric-1.18.2" as File
+// project(':fabric-1.17.1').projectDir = "$rootDir/fabric-1.17.1" as File
+// project(':fabric-1.16.4').projectDir = "$rootDir/fabric-1.16.4" as File
+// project(':fabric-1.15.2').projectDir = "$rootDir/fabric-1.15.2" as File
+// project(':fabric-1.14.4').projectDir = "$rootDir/fabric-1.14.4" as File
+// project(':forge-1.21.11').projectDir = "$rootDir/forge-1.21.11" as File
+// project(':forge-1.21.10').projectDir = "$rootDir/forge-1.21.10" as File
+// project(':forge-1.21.6').projectDir = "$rootDir/forge-1.21.6" as File
+// project(':forge-1.20.6').projectDir = "$rootDir/forge-1.20.6" as File
+// project(':forge-1.19.3').projectDir = "$rootDir/forge-1.19.3" as File
+// project(':forge-1.18.2').projectDir = "$rootDir/forge-1.18.2" as File
+// project(':forge-1.17.1').projectDir = "$rootDir/forge-1.17.1" as File
+// project(':forge-1.16.5').projectDir = "$rootDir/forge-1.16.5" as File
+// project(':forge-1.15.2').projectDir = "$rootDir/forge-1.15.2" as File
+// project(':forge-1.14.4').projectDir = "$rootDir/forge-1.14.4" as File
 

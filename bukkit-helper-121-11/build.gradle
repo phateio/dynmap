@@ -1,3 +1,7 @@
+plugins {
+  id 'io.papermc.paperweight.userdev'
+}
+
 eclipse {
     project {
         name = "Dynmap(Spigot-1.21.11)"
@@ -6,14 +10,14 @@ eclipse {
 
 description = 'bukkit-helper-1.21.11'
 
-sourceCompatibility = targetCompatibility = compileJava.sourceCompatibility = compileJava.targetCompatibility = JavaLanguageVersion.of(17) // Need this here so eclipse task generates correctly.
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(21)
+}
 
 dependencies {
   implementation project(':bukkit-helper')
   implementation project(':dynmap-api')
   implementation project(path: ':DynmapCore', configuration: 'shadow')
-  compileOnly group: 'org.spigotmc', name: 'spigot-api', version:'1.21.11-R0.1-SNAPSHOT'
-  compileOnly ('org.spigotmc:spigot:1.21.11-R0.1-SNAPSHOT') {
-    exclude group: "com.mojang", module: "jtracy"
-  }
+  // Use paperweight dev bundle instead of manual BuildTools-built Spigot
+  paperweight.paperDevBundle("1.21.11-R0.1-SNAPSHOT")
 }

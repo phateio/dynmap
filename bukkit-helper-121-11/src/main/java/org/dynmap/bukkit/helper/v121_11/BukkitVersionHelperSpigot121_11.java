@@ -1,9 +1,6 @@
 package org.dynmap.bukkit.helper.v121_11;
 
 import org.bukkit.*;
-import org.bukkit.craftbukkit.v1_21_R7.CraftChunk;
-import org.bukkit.craftbukkit.v1_21_R7.CraftWorld;
-import org.bukkit.craftbukkit.v1_21_R7.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 import org.dynmap.DynmapChunk;
 import org.dynmap.Log;
@@ -23,31 +20,33 @@ import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.properties.Property;
 import com.mojang.authlib.properties.PropertyMap;
 
-import net.minecraft.core.RegistryBlockID;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.IdMapper;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.core.IRegistry;
-import net.minecraft.nbt.NBTTagByteArray;
-import net.minecraft.nbt.NBTTagByte;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.nbt.NBTTagDouble;
-import net.minecraft.nbt.NBTTagFloat;
-import net.minecraft.nbt.NBTTagIntArray;
-import net.minecraft.nbt.NBTTagInt;
-import net.minecraft.nbt.NBTTagLong;
-import net.minecraft.nbt.NBTTagShort;
-import net.minecraft.nbt.NBTTagString;
-import net.minecraft.resources.MinecraftKey;
-import net.minecraft.nbt.NBTBase;
+import net.minecraft.nbt.ByteArrayTag;
+import net.minecraft.nbt.ByteTag;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.DoubleTag;
+import net.minecraft.nbt.FloatTag;
+import net.minecraft.nbt.IntArrayTag;
+import net.minecraft.nbt.IntTag;
+import net.minecraft.nbt.LongTag;
+import net.minecraft.nbt.ShortTag;
+import net.minecraft.nbt.StringTag;
+import net.minecraft.resources.Identifier;
+import net.minecraft.nbt.Tag;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.tags.TagsBlock;
-import net.minecraft.world.level.biome.BiomeBase;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.BlockFluids;
-import net.minecraft.world.level.block.entity.TileEntity;
-import net.minecraft.world.level.block.state.IBlockData;
+import net.minecraft.world.level.block.LiquidBlock;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
 
+import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -65,6 +64,51 @@ import java.util.Map;
  */
 public class BukkitVersionHelperSpigot121_11 extends BukkitVersionHelper {
 
+	// CraftBukkit class references (loaded via reflection for Paper/Spigot compatibility)
+	private static Class<?> craftWorldClass;
+	private static Class<?> craftChunkClass;
+	private static Class<?> craftPlayerClass;
+	private static Class<?> craftServerClass;
+	private static Method craftWorldGetHandle;
+	private static Method craftWorldGetMinHeight;
+	private static Method craftChunkGetHandle;
+	private static Method craftPlayerGetProfile;
+	private static Method craftServerGetServer;
+	private static boolean initialized = false;
+
+	private static void initCraftBukkitClasses() {
+		if (initialized) return;
+		initialized = true;
+
+		// Try Paper's unversioned packages first, then fall back to Spigot's versioned packages
+		String[] packagePrefixes = {
+			"org.bukkit.craftbukkit",           // Paper 1.20.5+
+			"org.bukkit.craftbukkit.v1_21_R7"   // Spigot 1.21.11
+		};
+
+		for (String prefix : packagePrefixes) {
+			try {
+				craftWorldClass = Class.forName(prefix + ".CraftWorld");
+				craftChunkClass = Class.forName(prefix + ".CraftChunk");
+				craftPlayerClass = Class.forName(prefix + ".entity.CraftPlayer");
+				craftServerClass = Class.forName(prefix + ".CraftServer");
+
+				// Get methods
+				craftWorldGetHandle = craftWorldClass.getMethod("getHandle");
+				craftWorldGetMinHeight = craftWorldClass.getMethod("getMinHeight");
+				craftChunkGetHandle = craftChunkClass.getMethod("getHandle", ChunkStatus.class);
+				craftPlayerGetProfile = craftPlayerClass.getMethod("getProfile");
+				craftServerGetServer = craftServerClass.getMethod("getServer");
+
+				Log.info("[Dynmap] Using CraftBukkit package: " + prefix);
+				return;
+			} catch (ClassNotFoundException | NoSuchMethodException e) {
+				// Try next prefix
+			}
+		}
+		Log.severe("[Dynmap] Failed to find CraftBukkit classes!");
+	}
+
 	@Override
 	public boolean isUnsafeAsync() {
 		return false;
@@ -75,19 +119,19 @@ public class BukkitVersionHelperSpigot121_11 extends BukkitVersionHelper {
 	 */
 	@Override
 	public String[] getBlockNames() {
-		RegistryBlockID<IBlockData> bsids = Block.k;
+		IdMapper<BlockState> bsids = Block.BLOCK_STATE_REGISTRY;
 		Block baseb = null;
-		Iterator<IBlockData> iter = bsids.iterator();
+		Iterator<BlockState> iter = bsids.iterator();
 		ArrayList<String> names = new ArrayList<String>();
 		while (iter.hasNext()) {
-			IBlockData bs = iter.next();
-			Block b = bs.b();
+			BlockState bs = iter.next();
+			Block b = bs.getBlock();
 			// If this is new block vs last, it's the base block state
 			if (b != baseb) {
 				baseb = b;
 				continue;
 			}
-			MinecraftKey id = BuiltInRegistries.e.b(b); // BuiltInRegistries.BLOCK.getKey(b)
+			Identifier id = BuiltInRegistries.BLOCK.getKey(b);
 			String bn = id.toString();
 			if (bn != null) {
 				names.add(bn);
@@ -97,13 +141,46 @@ public class BukkitVersionHelperSpigot121_11 extends BukkitVersionHelper {
 		return names.toArray(new String[0]);
 	}
 
-	private static IRegistry<BiomeBase> reg = null;
+	private static Object biomeRegistry = null;
+	private static java.lang.reflect.Method getKeyMethod = null;
+	private static java.lang.reflect.Method getIdMethod = null;
 
-	private static IRegistry<BiomeBase> getBiomeReg() {
-		if (reg == null) {
-			reg = MinecraftServer.getServer().bc().f(Registries.aS); // MinecraftServer.registryAccess().lookupOrThrow(Registries.BIOME)
+	private static Object getBiomeReg() {
+		if (biomeRegistry == null) {
+			biomeRegistry = MinecraftServer.getServer().registryAccess().lookup(Registries.BIOME).orElseThrow();
+			// Cache reflection methods
+			try {
+				getKeyMethod = biomeRegistry.getClass().getMethod("getKey", Object.class);
+				getIdMethod = biomeRegistry.getClass().getMethod("getId", Object.class);
+			} catch (Exception e) {
+				Log.severe("Failed to get biome registry methods: " + e.getMessage());
+			}
 		}
-		return reg;
+		return biomeRegistry;
+	}
+
+	@SuppressWarnings("unchecked")
+	private static Iterator<Biome> getBiomeIterator() {
+		return ((Iterable<Biome>) getBiomeReg()).iterator();
+	}
+
+	private static int getBiomeId(Biome biome) {
+		try {
+			getBiomeReg(); // ensure methods are cached
+			return (Integer) getIdMethod.invoke(biomeRegistry, biome);
+		} catch (Exception e) {
+			return -1;
+		}
+	}
+
+	private static Identifier getBiomeKey(Biome biome) {
+		try {
+			getBiomeReg(); // ensure methods are cached
+			return (Identifier) getKeyMethod.invoke(biomeRegistry, biome);
+		} catch (Exception e) {
+			Log.warning("Failed to get biome key: " + e.getMessage());
+			return null;
+		}
 	}
 
 	private Object[] biomelist;
@@ -113,11 +190,11 @@ public class BukkitVersionHelperSpigot121_11 extends BukkitVersionHelper {
 	@Override
 	public Object[] getBiomeBaseList() {
 		if (biomelist == null) {
-			biomelist = new BiomeBase[256];
-			Iterator<BiomeBase> iter = getBiomeReg().iterator();
+			biomelist = new Biome[256];
+			Iterator<Biome> iter = getBiomeIterator();
 			while (iter.hasNext()) {
-				BiomeBase b = iter.next();
-				int bidx = getBiomeReg().a(b); // Registry.getId
+				Biome b = iter.next();
+				int bidx = getBiomeId(b);
 				if (bidx >= biomelist.length) {
 					biomelist = Arrays.copyOf(biomelist, bidx + biomelist.length);
 				}
@@ -130,29 +207,29 @@ public class BukkitVersionHelperSpigot121_11 extends BukkitVersionHelper {
 	/** Get ID from biomebase */
 	@Override
 	public int getBiomeBaseID(Object bb) {
-		return getBiomeReg().a((BiomeBase)bb);
+		return getBiomeId((Biome)bb);
 	}
-	
-	public static IdentityHashMap<IBlockData, DynmapBlockState> dataToState;
-	
+
+	public static IdentityHashMap<BlockState, DynmapBlockState> dataToState;
+
 	/**
 	 * Initialize block states (org.dynmap.blockstate.DynmapBlockState)
 	 */
 	@Override
 	public void initializeBlockStates() {
-		dataToState = new IdentityHashMap<IBlockData, DynmapBlockState>();
+		dataToState = new IdentityHashMap<BlockState, DynmapBlockState>();
 		HashMap<String, DynmapBlockState> lastBlockState = new HashMap<String, DynmapBlockState>();
-		RegistryBlockID<IBlockData> bsids = Block.k;
+		IdMapper<BlockState> bsids = Block.BLOCK_STATE_REGISTRY;
 		Block baseb = null;
-		Iterator<IBlockData> iter = bsids.iterator();
+		Iterator<BlockState> iter = bsids.iterator();
 		ArrayList<String> names = new ArrayList<String>();
-		
+
 		// Loop through block data states
 		DynmapBlockState.Builder bld = new DynmapBlockState.Builder();
 		while (iter.hasNext()) {
-			IBlockData bd = iter.next();
-			Block b = bd.b();
-			MinecraftKey id = BuiltInRegistries.e.b(b);
+			BlockState bd = iter.next();
+			Block b = bd.getBlock();
+			Identifier id = BuiltInRegistries.BLOCK.getKey(b);
 			String bname = id.toString();
 			DynmapBlockState lastbs = lastBlockState.get(bname); // See if we have seen this one
 			int idx = 0;
@@ -167,21 +244,18 @@ public class BukkitVersionHelperSpigot121_11 extends BukkitVersionHelper {
 				int off2 = fname.indexOf(']');
 				sb = fname.substring(off1+1, off2);
 			}
-			int lightAtten = bd.g(); // BlockBehaviour$BlockStateBase.getLightBlock
-			//Log.info("statename=" + bname + "[" + sb + "], lightAtten=" + lightAtten);
+			int lightAtten = bd.getLightBlock();
 			// Fill in base attributes
 			bld.setBaseState(lastbs).setStateIndex(idx).setBlockName(bname).setStateName(sb).setAttenuatesLight(lightAtten);
-			if (bd.e()) { bld.setSolid(); } // BlockBehaviour$BlockStateBase.isSolid
-			if (bd.l()) { bld.setAir(); } // BlockBehaviour$BlockStateBase.isAir
-			if (bd.a(TagsBlock.av)) { bld.setLog(); } // BlockBehaviour$BlockStateBase.is(BlockTags.OVERWORLD_NATURAL_LOGS)
-			if (bd.a(TagsBlock.M)) { bld.setLeaves(); } // BlockBehaviour$BlockStateBase.is(BlockTags.LEAVES)
-			// BlockBehaviour$BlockStateBase.getFluidState.isEmpty(), BlockBehaviour$BlockStateBase.getBlock
-			if (!bd.y().c() && !(bd.b() instanceof BlockFluids)) { // Test if fluid type for block is not empty
+			if (bd.isSolid()) { bld.setSolid(); }
+			if (bd.isAir()) { bld.setAir(); }
+			if (bd.is(BlockTags.OVERWORLD_NATURAL_LOGS)) { bld.setLog(); }
+			if (bd.is(BlockTags.LEAVES)) { bld.setLeaves(); }
+			if (!bd.getFluidState().isEmpty() && !(bd.getBlock() instanceof LiquidBlock)) {
 				bld.setWaterlogged();
-				//Log.info("statename=" + bname + "[" + sb + "] = waterlogged");
 			}
 			DynmapBlockState dbs = bld.build(); // Build state
-			
+
 			dataToState.put(bd,  dbs);
 			lastBlockState.put(bname, (lastbs == null) ? dbs : lastbs);
 			Log.verboseinfo("blk=" + bname + ", idx=" + idx + ", state=" + sb + ", waterlogged=" + dbs.isWaterlogged());
@@ -199,26 +273,26 @@ public class BukkitVersionHelperSpigot121_11 extends BukkitVersionHelper {
 		c.setChunks(dw, chunks);
 		return c;
 	}
-	
+
 	/**
 	 * Get biome base water multiplier
 	 */
 	@Override
 	public int getBiomeBaseWaterMult(Object bb) {
-		BiomeBase biome = (BiomeBase) bb;
-		return biome.i(); // Biome.getWaterColor
+		Biome biome = (Biome) bb;
+		return biome.getWaterColor();
 	}
 
 	/** Get temperature from biomebase */
 	@Override
 	public float getBiomeBaseTemperature(Object bb) {
-		return ((BiomeBase)bb).f(); // Biome.getBaseTemperature
+		return ((Biome)bb).getBaseTemperature();
 	}
 
 	/** Get humidity from biomebase */
 	@Override
 	public float getBiomeBaseHumidity(Object bb) {
-		String vals = ((BiomeBase)bb).i.toString();	// Biome.climateSettings
+		String vals = ((Biome)bb).climateSettings.toString();
 		float humidity = 0.5F;
 		int idx = vals.indexOf("downfall=");
 		if (idx >= 0) {
@@ -226,7 +300,7 @@ public class BukkitVersionHelperSpigot121_11 extends BukkitVersionHelper {
 		}
 		return humidity;
 	}
-	
+
 	@Override
 	public Polygon getWorldBorder(World world) {
 		Polygon p = null;
@@ -251,7 +325,7 @@ public class BukkitVersionHelperSpigot121_11 extends BukkitVersionHelper {
 			p.sendTitle(title, subtitle, fadeInTicks, stayTicks, fadeOutTIcks);
 		}
 	}
-	
+
 	/**
 	 * Get material map by block ID
 	 */
@@ -270,10 +344,10 @@ public class BukkitVersionHelperSpigot121_11 extends BukkitVersionHelper {
 	public String[] getBiomeNames() {
 		if (biomenames == null) {
 			biomenames = new String[256];
-			Iterator<BiomeBase> iter = getBiomeReg().iterator();
+			Iterator<Biome> iter = getBiomeIterator();
 			while (iter.hasNext()) {
-				BiomeBase b = iter.next();
-				int bidx = getBiomeReg().a(b);
+				Biome b = iter.next();
+				int bidx = getBiomeId(b);
 				if (bidx >= biomenames.length) {
 					biomenames = Arrays.copyOf(biomenames, bidx + biomenames.length);
 				}
@@ -291,100 +365,121 @@ public class BukkitVersionHelperSpigot121_11 extends BukkitVersionHelper {
 	@Override
 	/** Get ID string from biomebase */
 	public String getBiomeBaseIDString(Object bb) {
-		return getBiomeReg().b((BiomeBase)bb).a(); // MinecraftKey.getPath()
+		Identifier key = getBiomeKey((Biome)bb);
+		return key != null ? key.getPath() : "";
 	}
 	@Override
 	public String getBiomeBaseResourceLocsation(Object bb) {
-		return getBiomeReg().b((BiomeBase)bb).toString();
+		Identifier key = getBiomeKey((Biome)bb);
+		return key != null ? key.toString() : "";
 	}
 
 	@Override
 	public Object getUnloadQueue(World world) {
 		Log.warning("getUnloadQueue not implemented yet");
-		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public boolean isInUnloadQueue(Object unloadqueue, int x, int z) {
 		Log.warning("isInUnloadQueue not implemented yet");
-		// TODO Auto-generated method stub
 		return false;
 	}
 
 	@Override
 	public Object[] getBiomeBaseFromSnapshot(ChunkSnapshot css) {
 		Log.warning("getBiomeBaseFromSnapshot not implemented yet");
-		// TODO Auto-generated method stub
 		return new Object[256];
 	}
 
 	@Override
 	public long getInhabitedTicks(Chunk c) {
-		return ((CraftChunk)c).getHandle(ChunkStatus.n).w(); // ChunkStatus.FULL ; ChunkAccess.getInhabitedTime
+		initCraftBukkitClasses();
+		try {
+			Object handle = craftChunkGetHandle.invoke(c, ChunkStatus.FULL);
+			return ((LevelChunk)handle).getInhabitedTime();
+		} catch (Exception e) {
+			Log.warning("getInhabitedTicks failed: " + e.getMessage());
+			return 0;
+		}
 	}
 
 	@Override
 	public Map<?, ?> getTileEntitiesForChunk(Chunk c) {
-		return ((CraftChunk)c).getHandle(ChunkStatus.n).j; // ChunkStatus.FULL ; ChunkAccess.blockEntities
+		initCraftBukkitClasses();
+		try {
+			Object handle = craftChunkGetHandle.invoke(c, ChunkStatus.FULL);
+			return ((LevelChunk)handle).getBlockEntities();
+		} catch (Exception e) {
+			Log.warning("getTileEntitiesForChunk failed: " + e.getMessage());
+			return new HashMap<>();
+		}
 	}
 
 	@Override
 	public int getTileEntityX(Object te) {
-		TileEntity tileent = (TileEntity) te;
-		return tileent.aD_().u(); // BlockEntity.getBlockPos ; Vec3i.getX
+		BlockEntity blockent = (BlockEntity) te;
+		return blockent.getBlockPos().getX();
 	}
 
 	@Override
 	public int getTileEntityY(Object te) {
-		TileEntity tileent = (TileEntity) te;
-		return tileent.aD_().v(); // BlockEntity.getBlockPos ; Vec3i.getY
+		BlockEntity blockent = (BlockEntity) te;
+		return blockent.getBlockPos().getY();
 	}
 
 	@Override
 	public int getTileEntityZ(Object te) {
-		TileEntity tileent = (TileEntity) te;
-		return tileent.aD_().w(); // BlockEntity.getBlockPos ; Vec3i.getZ
+		BlockEntity blockent = (BlockEntity) te;
+		return blockent.getBlockPos().getZ();
 	}
 
 	@Override
 	public Object readTileEntityNBT(Object te, World w) {
-		TileEntity tileent = (TileEntity) te;
-		CraftWorld cw = (CraftWorld) w;
-		return tileent.d(cw.getHandle().J_()); // BlockEntity.saveCustomOnly ; LevelReader.registryAccess
+		initCraftBukkitClasses();
+		try {
+			BlockEntity blockent = (BlockEntity) te;
+			Object handle = craftWorldGetHandle.invoke(w);
+			Method registryAccess = handle.getClass().getMethod("registryAccess");
+			HolderLookup.Provider registry = (HolderLookup.Provider) registryAccess.invoke(handle);
+			return blockent.saveCustomOnly(registry);
+		} catch (Exception e) {
+			Log.warning("readTileEntityNBT failed: " + e.getMessage());
+			return null;
+		}
 	}
 
 	@Override
 	public Object getFieldValue(Object nbt, String field) {
-		NBTTagCompound rec = (NBTTagCompound) nbt;
-		NBTBase val = rec.a(field); // CompoundTag.get
+		CompoundTag rec = (CompoundTag) nbt;
+		Tag val = rec.get(field);
 		if(val == null) return null;
-		if(val instanceof NBTTagByte) {
-			return ((NBTTagByte)val).n(); // ByteTag.value
+		if(val instanceof ByteTag) {
+			return ((ByteTag)val).byteValue();
 		}
-		else if(val instanceof NBTTagShort) {
-			return ((NBTTagShort)val).n(); // ShortTag.value
+		else if(val instanceof ShortTag) {
+			return ((ShortTag)val).shortValue();
 		}
-		else if(val instanceof NBTTagInt) {
-			return ((NBTTagInt)val).n(); // IntTag.value
+		else if(val instanceof IntTag) {
+			return ((IntTag)val).intValue();
 		}
-		else if(val instanceof NBTTagLong) {
-			return ((NBTTagLong)val).n(); // LongTag.value
+		else if(val instanceof LongTag) {
+			return ((LongTag)val).longValue();
 		}
-		else if(val instanceof NBTTagFloat) {
-			return ((NBTTagFloat)val).n(); // FloatTag.value
+		else if(val instanceof FloatTag) {
+			return ((FloatTag)val).floatValue();
 		}
-		else if(val instanceof NBTTagDouble) {
-			return ((NBTTagDouble)val).n(); // DoubleTag.value
+		else if(val instanceof DoubleTag) {
+			return ((DoubleTag)val).doubleValue();
 		}
-		else if(val instanceof NBTTagByteArray) {
-			return ((NBTTagByteArray)val).e(); // ByteArrayTag.getAsByteArray
+		else if(val instanceof ByteArrayTag) {
+			return ((ByteArrayTag)val).getAsByteArray();
 		}
-		else if(val instanceof NBTTagString) {
-			return ((NBTTagString)val).k(); // StringTag.value
+		else if(val instanceof StringTag) {
+			return val.asString().orElse("");
 		}
-		else if(val instanceof NBTTagIntArray) {
-			return ((NBTTagIntArray)val).g(); // IntArrayTag.getAsIntArray
+		else if(val instanceof IntArrayTag) {
+			return ((IntArrayTag)val).getAsIntArray();
 		}
 		return null;
 	}
@@ -399,7 +494,7 @@ public class BukkitVersionHelperSpigot121_11 extends BukkitVersionHelper {
 	public double getHealth(Player p) {
 		return p.getHealth();
 	}
-	
+
 	private static final Gson gson = new GsonBuilder().create();
 
 	/**
@@ -408,39 +503,48 @@ public class BukkitVersionHelperSpigot121_11 extends BukkitVersionHelper {
 	 */
 	@Override
 	public String getSkinURL(Player player) {
+		initCraftBukkitClasses();
 		String url = null;
-		CraftPlayer cp = (CraftPlayer)player;
-		GameProfile profile = cp.getProfile();
-		if (profile != null) {
-			PropertyMap pm = profile.properties();
-			if (pm != null) {
-				Collection<Property> txt = pm.get("textures");
-				Property textureProperty = Iterables.getFirst(pm.get("textures"), null);
-				if (textureProperty != null) {
-					String val = textureProperty.value();
-					if (val != null) {
-						TexturesPayload result = null;
-						try {
-							String json = new String(Base64.getDecoder().decode(val), StandardCharsets.UTF_8);
-							result = gson.fromJson(json, TexturesPayload.class);
-						} catch (JsonParseException e) {
-						} catch (IllegalArgumentException x) {
-							Log.warning("Malformed response from skin URL check: " + val);
-						}
-						if ((result != null) && (result.textures != null) && (result.textures.containsKey("SKIN"))) {
-							url = result.textures.get("SKIN").url;
+		try {
+			GameProfile profile = (GameProfile) craftPlayerGetProfile.invoke(player);
+			if (profile != null) {
+				PropertyMap pm = profile.properties();
+				if (pm != null) {
+					Collection<Property> txt = pm.get("textures");
+					Property textureProperty = Iterables.getFirst(pm.get("textures"), null);
+					if (textureProperty != null) {
+						String val = textureProperty.value();
+						if (val != null) {
+							TexturesPayload result = null;
+							try {
+								String json = new String(Base64.getDecoder().decode(val), StandardCharsets.UTF_8);
+								result = gson.fromJson(json, TexturesPayload.class);
+							} catch (JsonParseException e) {
+							} catch (IllegalArgumentException x) {
+								Log.warning("Malformed response from skin URL check: " + val);
+							}
+							if ((result != null) && (result.textures != null) && (result.textures.containsKey("SKIN"))) {
+								url = result.textures.get("SKIN").url;
+							}
 						}
 					}
 				}
 			}
-		}		
+		} catch (Exception e) {
+			Log.warning("getSkinURL failed: " + e.getMessage());
+		}
 		return url;
 	}
 	// Get minY for world
 	@Override
 	public int getWorldMinY(World w) {
-		CraftWorld cw = (CraftWorld) w;
-		return cw.getMinHeight();
+		initCraftBukkitClasses();
+		try {
+			return (Integer) craftWorldGetMinHeight.invoke(w);
+		} catch (Exception e) {
+			Log.warning("getWorldMinY failed: " + e.getMessage());
+			return 0;
+		}
 	}
 	@Override
 	public boolean useGenericCache() {

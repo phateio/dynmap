@@ -1,22 +1,24 @@
 package org.dynmap.bukkit.helper.v121_11;
 
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.world.level.ChunkCoordIntPair;
-import net.minecraft.world.level.biome.BiomeBase;
-import net.minecraft.world.level.biome.BiomeFog;
-import net.minecraft.world.level.chunk.Chunk;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.biome.BiomeSpecialEffects;
+import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.chunk.storage.SerializableChunkData;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
-import org.bukkit.craftbukkit.v1_21_R7.CraftServer;
-import org.bukkit.craftbukkit.v1_21_R7.CraftWorld;
 import org.dynmap.DynmapChunk;
+import org.dynmap.Log;
 import org.dynmap.bukkit.helper.BukkitWorld;
 import org.dynmap.common.BiomeMap;
 import org.dynmap.common.chunk.GenericChunk;
 import org.dynmap.common.chunk.GenericChunkCache;
 import org.dynmap.common.chunk.GenericMapChunkCache;
 
+import java.lang.reflect.Method;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -29,6 +31,74 @@ import java.util.function.Supplier;
  */
 public class MapChunkCache121_11 extends GenericMapChunkCache {
 	private World w;
+
+	// CraftBukkit reflection support for Paper/Spigot compatibility
+	private static Class<?> craftWorldClass;
+	private static Class<?> craftServerClass;
+	private static Method craftWorldGetHandle;
+	private static Method craftWorldIsChunkLoaded;
+	private static Method craftServerGetServer;
+	private static boolean initialized = false;
+
+	private static void initReflection() {
+		if (initialized) return;
+		initialized = true;
+
+		// Try Paper's unversioned packages first, then fall back to Spigot's versioned packages
+		String[] packagePrefixes = {
+			"org.bukkit.craftbukkit",           // Paper 1.20.5+
+			"org.bukkit.craftbukkit.v1_21_R7"   // Spigot 1.21.11
+		};
+
+		for (String prefix : packagePrefixes) {
+			try {
+				craftWorldClass = Class.forName(prefix + ".CraftWorld");
+				craftServerClass = Class.forName(prefix + ".CraftServer");
+
+				// Get methods
+				craftWorldGetHandle = craftWorldClass.getMethod("getHandle");
+				craftWorldIsChunkLoaded = craftWorldClass.getMethod("isChunkLoaded", int.class, int.class);
+				craftServerGetServer = craftServerClass.getMethod("getServer");
+
+				Log.info("[Dynmap] MapChunkCache using CraftBukkit package: " + prefix);
+				return;
+			} catch (ClassNotFoundException | NoSuchMethodException e) {
+				// Try next prefix
+			}
+		}
+		Log.severe("[Dynmap] MapChunkCache failed to find CraftBukkit classes!");
+	}
+
+	private ServerLevel getServerLevel(World world) {
+		initReflection();
+		try {
+			return (ServerLevel) craftWorldGetHandle.invoke(world);
+		} catch (Exception e) {
+			Log.severe("Failed to get ServerLevel: " + e.getMessage());
+			return null;
+		}
+	}
+
+	private boolean isChunkLoaded(World world, int x, int z) {
+		initReflection();
+		try {
+			return (Boolean) craftWorldIsChunkLoaded.invoke(world, x, z);
+		} catch (Exception e) {
+			Log.warning("Failed to check chunk loaded status: " + e.getMessage());
+			return false;
+		}
+	}
+
+	private MinecraftServer getMinecraftServer() {
+		initReflection();
+		try {
+			return (MinecraftServer) craftServerGetServer.invoke(Bukkit.getServer());
+		} catch (Exception e) {
+			Log.severe("Failed to get MinecraftServer: " + e.getMessage());
+			return null;
+		}
+	}
+
 	/**
 	 * Construct empty cache
 	 */
@@ -38,44 +108,57 @@ public class MapChunkCache121_11 extends GenericMapChunkCache {
 
 	@Override
 	protected Supplier<GenericChunk> getLoadedChunkAsync(DynmapChunk chunk) {
+		ServerLevel serverLevel = getServerLevel(w);
+		MinecraftServer server = getMinecraftServer();
+		if (serverLevel == null || server == null) {
+			return () -> null;
+		}
+
 		CompletableFuture<Optional<SerializableChunkData>> chunkData = CompletableFuture.supplyAsync(() -> {
-			CraftWorld cw = (CraftWorld) w;
-			Chunk c = cw.getHandle().getChunkIfLoaded(chunk.x, chunk.z);
-			if (c == null || !c.p) { // !LevelChunk.loaded
+			LevelChunk c = serverLevel.getChunkIfLoaded(chunk.x, chunk.z);
+			if (c == null || !c.loaded) {
 				return Optional.empty();
 			}
-			return Optional.of(SerializableChunkData.a(cw.getHandle(), c)); // SerializableChunkData.copyOf
-		}, ((CraftServer) Bukkit.getServer()).getServer());
-		return () -> chunkData.join().map(SerializableChunkData::a).map(NBT.NBTCompound::new).map(this::parseChunkFromNBT).orElse(null); // SerializableChunkData::write
+			return Optional.of(SerializableChunkData.copyOf(serverLevel, c));
+		}, server);
+		return () -> chunkData.join().map(SerializableChunkData::write).map(NBT.NBTCompound::new).map(this::parseChunkFromNBT).orElse(null);
 	}
 
 	protected GenericChunk getLoadedChunk(DynmapChunk chunk) {
-		CraftWorld cw = (CraftWorld) w;
-		if (!cw.isChunkLoaded(chunk.x, chunk.z)) return null;
-		Chunk c = cw.getHandle().getChunkIfLoaded(chunk.x, chunk.z);
-		if (c == null || !c.p) return null; // LevelChunk.loaded
-		SerializableChunkData chunkData = SerializableChunkData.a(cw.getHandle(), c); //SerializableChunkData.copyOf
-		NBTTagCompound nbt = chunkData.a(); // SerializableChunkData.write
+		ServerLevel serverLevel = getServerLevel(w);
+		if (serverLevel == null) return null;
+
+		if (!isChunkLoaded(w, chunk.x, chunk.z)) return null;
+		LevelChunk c = serverLevel.getChunkIfLoaded(chunk.x, chunk.z);
+		if (c == null || !c.loaded) return null;
+		SerializableChunkData chunkData = SerializableChunkData.copyOf(serverLevel, c);
+		CompoundTag nbt = chunkData.write();
 		return nbt != null ? parseChunkFromNBT(new NBT.NBTCompound(nbt)) : null;
 	}
 
 	@Override
 	protected Supplier<GenericChunk> loadChunkAsync(DynmapChunk chunk) {
-		CraftWorld cw = (CraftWorld) w;
-		CompletableFuture<Optional<NBTTagCompound>> genericChunk = cw.getHandle().p().a.d(new ChunkCoordIntPair(chunk.x, chunk.z)); // ServerLevel.getChunkSource().chunkMap.read(new ChunkCoordIntPair(chunk.x, chunk.z))
+		ServerLevel serverLevel = getServerLevel(w);
+		if (serverLevel == null) {
+			return () -> null;
+		}
+
+		CompletableFuture<Optional<CompoundTag>> genericChunk = serverLevel.getChunkSource().chunkMap.read(new ChunkPos(chunk.x, chunk.z));
 		return () -> genericChunk.join().map(NBT.NBTCompound::new).map(this::parseChunkFromNBT).orElse(null);
 	}
 
 	protected GenericChunk loadChunk(DynmapChunk chunk) {
-		CraftWorld cw = (CraftWorld) w;
-		NBTTagCompound nbt = null;
-		ChunkCoordIntPair cc = new ChunkCoordIntPair(chunk.x, chunk.z);
+		ServerLevel serverLevel = getServerLevel(w);
+		if (serverLevel == null) return null;
+
+		CompoundTag nbt = null;
+		ChunkPos cc = new ChunkPos(chunk.x, chunk.z);
 		GenericChunk gc = null;
-		try {	// BUGBUG - convert this all to asyn properly, since now native async
-			nbt = cw.getHandle()
-					.p() // ServerLevel.getChunkSource
-					.a // ServerChunkCache.chunkMap
-					.d(cc) // SimpleRegionStorage.read(ChunkPos)
+		try {
+			nbt = serverLevel
+					.getChunkSource()
+					.chunkMap
+					.read(cc)
 					.join().get();
 		} catch (CancellationException cx) {
 		} catch (NoSuchElementException snex) {
@@ -93,13 +176,13 @@ public class MapChunkCache121_11 extends GenericMapChunkCache {
 
 	@Override
 	public int getFoliageColor(BiomeMap bm, int[] colormap, int x, int z) {
-		return bm.<BiomeBase>getBiomeObject().map(BiomeBase::h).flatMap(BiomeFog::b).orElse(colormap[bm.biomeLookup()]); // BiomeBase::getSpecialEffects, Biome::foliageColorOverride
+		return bm.<Biome>getBiomeObject().map(Biome::getSpecialEffects).flatMap(BiomeSpecialEffects::foliageColorOverride).orElse(colormap[bm.biomeLookup()]);
 	}
 
 	@Override
 	public int getGrassColor(BiomeMap bm, int[] colormap, int x, int z) {
-		BiomeFog fog = bm.<BiomeBase>getBiomeObject().map(BiomeBase::h).orElse(null); // BiomeBase::getSpecialEffects
-		if (fog == null) return colormap[bm.biomeLookup()];
-		return fog.e().a(x, z, fog.d().orElse(colormap[bm.biomeLookup()])); // BiomeFog.grassColorModifier.modifyColor ; BiomeFog.grassColorOverride
+		BiomeSpecialEffects effects = bm.<Biome>getBiomeObject().map(Biome::getSpecialEffects).orElse(null);
+		if (effects == null) return colormap[bm.biomeLookup()];
+		return effects.grassColorModifier().modifyColor(x, z, effects.grassColorOverride().orElse(colormap[bm.biomeLookup()]));
 	}
 }

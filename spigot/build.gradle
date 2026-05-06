@@ -16,7 +16,10 @@ repositories {
     }
 }
 
-sourceCompatibility = targetCompatibility = compileJava.sourceCompatibility = compileJava.targetCompatibility = '1.8' // Need this here so eclipse task generates correctly.
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+}
 
 dependencies {
     implementation('org.bukkit:bukkit:1.10.2-R0.1-SNAPSHOT') { transitive = false }
@@ -103,9 +106,9 @@ dependencies {
     implementation(project(':bukkit-helper-121-6')) {
         transitive = false
     }
-    implementation(project(':bukkit-helper-121-10')) {
-        transitive = false
-    }
+    // implementation(project(':bukkit-helper-121-10')) {  // disabled, see settings.gradle
+    //     transitive = false
+    // }
     implementation(project(':bukkit-helper-121-11')) {
         transitive = false
     }
@@ -128,7 +131,8 @@ jar {
 
 shadowJar {
     dependencies {
-        include(dependency('org.bstats::'))
+        include(dependency('org.bstats:bstats-bukkit:.*'))
+        include(dependency('org.bstats:bstats-base:.*'))
         include(dependency(':dynmap-api'))
         include(dependency(":DynmapCore"))
         include(dependency(':bukkit-helper'))
@@ -154,7 +158,7 @@ shadowJar {
         include(dependency(':bukkit-helper-121-4'))
         include(dependency(':bukkit-helper-121-5'))
         include(dependency(':bukkit-helper-121-6'))
-        include(dependency(':bukkit-helper-121-10'))
+        // include(dependency(':bukkit-helper-121-10'))
         include(dependency(':bukkit-helper-121-11'))
     }
     relocate('org.bstats', 'org.dynmap.bstats')
@@ -164,7 +168,7 @@ shadowJar {
 }
 shadowJar.doLast {
     task ->
-        ant.checksum file: task.archivePath
+        ant.checksum file: task.archiveFile.get().asFile
 }
 
 artifacts {
