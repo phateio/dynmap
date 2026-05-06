@@ -112,6 +112,18 @@ dependencies {
     implementation(project(':bukkit-helper-121-11')) {
         transitive = false
     }
+    // WORKAROUND: paperweight registers its `reobf` configuration as the
+    // preferred runtime variant, but Paper 26.1+ ships Mojang-mapped only and
+    // the dev bundle no longer provides reobf mappings, so reobfJar can't run
+    // and the `reobf` outgoing artifact is empty. Pinning `configuration:
+    // 'default'` here bypasses Gradle variant matching and pulls the plain
+    // jar instead, so org.dynmap.bukkit.helper.v26_1_2.* actually lands in
+    // the shaded spigot jar. Do NOT "align" this back to the sibling
+    // bukkit-helper modules' style without first verifying paperweight
+    // exposes a working reobf jar for this Minecraft version.
+    implementation(project(path: ':bukkit-helper-26-1-2', configuration: 'default')) {
+        transitive = false
+    }
 }
 
 processResources {
@@ -160,6 +172,7 @@ shadowJar {
         include(dependency(':bukkit-helper-121-6'))
         // include(dependency(':bukkit-helper-121-10'))
         include(dependency(':bukkit-helper-121-11'))
+        include(dependency(':bukkit-helper-26-1-2:.*'))
     }
     relocate('org.bstats', 'org.dynmap.bstats')
     destinationDirectory = file '../target'
