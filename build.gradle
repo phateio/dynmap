@@ -30,7 +30,7 @@ allprojects  {
   apply plugin: 'java'
   
   group = 'us.dynmap'
-  version = '3.9-SNAPSHOT'
+  version = '26.1.2-beta.10'
 
 }
 
@@ -47,7 +47,7 @@ subprojects {
   apply plugin: 'maven-publish'
 
   // Set Java version - paperweight modules define their own Java version
-  if (project.name != 'bukkit-helper-121-11') {
+  if (project.name != 'bukkit-helper-121-11' && project.name != 'bukkit-helper-26-1-2') {
     java {
       sourceCompatibility = JavaVersion.VERSION_1_8
       targetCompatibility = JavaVersion.VERSION_1_8

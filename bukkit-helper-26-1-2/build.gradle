@@ -1,0 +1,54 @@
+plugins {
+  id 'io.papermc.paperweight.userdev'
+}
+
+eclipse {
+    project {
+        name = "Dynmap(Spigot-26.1.2)"
+    }
+}
+
+description = 'bukkit-helper-26.1.2'
+
+// Minecraft 26.1+ Paper requires Java 25 at runtime, so the userdev setup
+// (paperclip patching) needs to launch under Java 25 as well. The Shadow
+// plugin in this build runs on JDK 21 and cannot read Java 25 (major 69)
+// bytecode, so emit Java 21 bytecode here while keeping the Java 25 toolchain
+// for compilation against Paper's API. `options.release` (rather than
+// source/targetCompatibility) keeps the org.gradle.jvm.version attribute at
+// 25 so paper-api (which requires JVM 25) still resolves.
+//
+// FIXME: drop the toolchain-25 + release-21 + JVM-25-attribute dance once the
+// Shadow plugin can run on JDK 25 (Gradle would then run on 25 too and read
+// major-69 class files natively).
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(25)
+}
+tasks.named('compileJava').configure {
+    options.release = 21
+}
+
+// `options.release = 21` would normally narrow the resolution attribute to
+// JVM 21, but paper-api 26.1.2 declares JVM 25 in its module metadata. Force
+// the consumer attribute back to 25 so dependency resolution succeeds; the
+// emitted bytecode is still Java 21 thanks to `--release`.
+[configurations.compileClasspath, configurations.runtimeClasspath].each { cfg ->
+    cfg.attributes {
+        attribute(TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE, 25)
+    }
+}
+
+dependencies {
+  implementation project(':bukkit-helper')
+  implementation project(':dynmap-api')
+  implementation project(path: ':DynmapCore', configuration: 'shadow')
+  // Paper publishes 26.1.2 dev bundles as "26.1.2.build.<N>-stable" (no -R0.1-SNAPSHOT for the new version scheme)
+  paperweight.paperDevBundle("26.1.2.build.57-stable")
+}
+
+// Paper 26.1+ ships Mojang-mapped at runtime; the dev bundle no longer
+// provides reobf-to-Spigot mappings, so the reobfJar task can't run. Disable
+// it. Consumers (spigot) must then pull from the `runtimeElements`
+// configuration explicitly because paperweight registers `reobf` as the
+// preferred runtime variant.
+tasks.named('reobfJar').configure { enabled = false }
