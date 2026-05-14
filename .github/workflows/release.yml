@@ -33,11 +33,8 @@ jobs:
           echo "jar_name=$(basename $JAR_FILE)" >> $GITHUB_OUTPUT
 
       - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ${{ steps.find_jar.outputs.jar_file }}
-          asset_name: ${{ steps.find_jar.outputs.jar_name }}
-          asset_content_type: application/java-archive
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "${{ github.event.release.tag_name }}" \
+            "${{ steps.find_jar.outputs.jar_file }}" --clobber
