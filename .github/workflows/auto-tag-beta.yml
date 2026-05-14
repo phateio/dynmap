@@ -1,0 +1,153 @@
+name: Auto Tag Beta
+
+# Beta-release factory for feature work on `claude/**` branches.
+#
+# On every push to such a branch this workflow:
+#   1. Derives the beta base (e.g. "26.1.2-beta") from build.gradle's
+#      `version = '<base>.<N>'` line, so the tag prefix tracks the source
+#      tree automatically and only one place needs editing when a new MC
+#      version ships. If build.gradle's version is in `<base>-SNAPSHOT`
+#      form (the default on v3.0-fork) the workflow exits early -- the
+#      operator is expected to bump build.gradle to a `<base>.<N>` form
+#      on the feature branch before pushing.
+#   2. Computes the next `<base>.<N>` tag (max existing + 1; first run = 1).
+#   3. Syncs build.gradle to that tag, commits the bump back with [skip ci]
+#      so this workflow does not loop on its own commit.
+#   4. Builds the spigot jar. Two JDKs are installed so the same workflow
+#      works for current MC versions (Paper API on JVM 21) and for the
+#      Paper-26.1+ line that requires a JDK 25 toolchain; Gradle itself
+#      runs on JDK 21 (Shadow 9.x is happy there) and picks JDK 25 via
+#      foojay-resolver when a paperweight subproject asks for it.
+#   5. Creates the tag + a prerelease GitHub Release with the jar attached.
+#
+# All `claude/**` branches share a single tag namespace via the global
+# concurrency group below, so two simultaneous pushes can't race for the
+# same tag, but the counter (e.g. .5 -> .6 -> .7) is global. If you ever
+# need per-branch numbering, change the concurrency group and put the
+# branch name into the tag prefix.
+#
+# The PR itself is created out-of-band by a human/operator with proper
+# pull_requests:write credentials; this workflow only handles tagging and
+# releases.
+
+on:
+  push:
+    branches:
+      - 'claude/**'
+
+concurrency:
+  group: auto-tag-beta
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute next beta version
+        id: next
+        run: |
+          set -euo pipefail
+          git fetch --tags --force
+          # Expect a `<base>.<N>` version. Anything else (e.g. SNAPSHOT) -> exit 1.
+          BASE=$(sed -nE "s/^ *version *= *'(.+)\.[0-9]+'.*/\1/p" build.gradle | head -n1)
+          if [ -z "${BASE}" ]; then
+            echo "build.gradle version is not in <base>.<N> form; nothing to tag." >&2
+            exit 1
+          fi
+          # Escape regex metacharacters in BASE before splicing it into sed;
+          # the `.`s in e.g. "26.1.2-beta" would otherwise match any char
+          # and let stray tags like "26X1X2-beta.5" slip through.
+          BASE_RE=$(printf '%s' "${BASE}" | sed 's/[.[\^$*+?(){}|\\]/\\&/g')
+          LAST=$(git tag --list "${BASE}.*" \
+            | sed -n "s/^${BASE_RE}\.\([0-9]\+\)\$/\1/p" \
+            | sort -n | tail -n 1)
+          NEXT=$(( ${LAST:-0} + 1 ))
+          TAG="${BASE}.${NEXT}"
+          echo "base=${BASE}" >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG}"   >> "$GITHUB_OUTPUT"
+          echo "Next tag: ${TAG}"
+
+      - name: Sync build.gradle version
+        run: |
+          set -euo pipefail
+          sed -i -E "s/^( *version *= *')[^']+(')/\1${{ steps.next.outputs.tag }}\2/" build.gradle
+          grep -E "^ *version *= *'" build.gradle
+
+      - name: Commit version bump
+        env:
+          TAG: ${{ steps.next.outputs.tag }}
+        run: |
+          set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if ! git diff --quiet -- build.gradle; then
+            git add build.gradle
+            git commit -m "chore(release): bump version to ${TAG} [skip ci]"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          else
+            echo "build.gradle already at ${TAG}; nothing to commit."
+          fi
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v5
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Build spigot jar
+        env:
+          USERNAME:  ${{ secrets.USERNAME }}
+          TOKEN:     ${{ secrets.TOKEN }}
+          JAVA_HOME: ${{ env.JAVA_HOME_21_X64 }}
+        # Run Gradle itself on JDK 21 (Shadow 9.x is happy there); any
+        # paperweight subproject that needs JDK 25 picks it up via
+        # foojay-resolver-convention from the installations path below.
+        run: |
+          ./gradlew :spigot:build \
+            -Porg.gradle.java.installations.paths="${JAVA_HOME_25_X64},${JAVA_HOME_21_X64}"
+
+      - name: Locate built jar
+        id: jar
+        run: |
+          set -euo pipefail
+          JAR_FILE=$(ls target/Dynmap-*-spigot.jar | tail -n 1)
+          echo "path=${JAR_FILE}" >> "$GITHUB_OUTPUT"
+          echo "name=$(basename "${JAR_FILE}")" >> "$GITHUB_OUTPUT"
+
+      - name: Create tag and GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG:      ${{ steps.next.outputs.tag }}
+          BASE:     ${{ steps.next.outputs.base }}
+          JAR_PATH: ${{ steps.jar.outputs.path }}
+        run: |
+          set -euo pipefail
+          # The version-bump push (if any) updated origin; re-resolve HEAD.
+          git fetch origin "${GITHUB_REF_NAME}"
+          SHA=$(git rev-parse "origin/${GITHUB_REF_NAME}")
+          git tag "${TAG}" "${SHA}"
+          git push origin "${TAG}"
+          gh release create "${TAG}" \
+            "${JAR_PATH}" \
+            --title      "Dynmap ${TAG}" \
+            --notes      "Automated ${BASE} build from commit ${SHA}." \
+            --prerelease \
+            --target     "${SHA}"
