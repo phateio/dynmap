@@ -40,9 +40,8 @@ public class MapChunkCache26_2 extends GenericMapChunkCache {
 	private static Method craftServerGetServer;
 	private static boolean initialized = false;
 
-	private static void initReflection() {
+	private static synchronized void initReflection() {
 		if (initialized) return;
-		initialized = true;
 
 		// Try Paper's unversioned packages first, then fall back to Spigot's versioned packages
 		String[] packagePrefixes = {
@@ -61,6 +60,7 @@ public class MapChunkCache26_2 extends GenericMapChunkCache {
 				craftServerGetServer = craftServerClass.getMethod("getServer");
 
 				Log.info("[Dynmap] MapChunkCache using CraftBukkit package: " + prefix);
+				initialized = true;
 				return;
 			} catch (ClassNotFoundException | NoSuchMethodException e) {
 				// Try next prefix
