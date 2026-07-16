@@ -76,9 +76,8 @@ public class BukkitVersionHelperSpigot26_2 extends BukkitVersionHelper {
 	private static Method craftServerGetServer;
 	private static boolean initialized = false;
 
-	private static void initCraftBukkitClasses() {
+	private static synchronized void initCraftBukkitClasses() {
 		if (initialized) return;
-		initialized = true;
 
 		// Try Paper's unversioned packages first, then fall back to Spigot's versioned packages
 		String[] packagePrefixes = {
@@ -101,6 +100,7 @@ public class BukkitVersionHelperSpigot26_2 extends BukkitVersionHelper {
 				craftServerGetServer = craftServerClass.getMethod("getServer");
 
 				Log.info("[Dynmap] Using CraftBukkit package: " + prefix);
+				initialized = true;
 				return;
 			} catch (ClassNotFoundException | NoSuchMethodException e) {
 				// Try next prefix
