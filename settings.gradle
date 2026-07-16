@@ -9,7 +9,7 @@ pluginManagement {
 plugins {
   // Apply paperweight.userdev to root project with 'apply false' for multi-project builds
   // See: https://docs.papermc.io/paper/dev/userdev/
-  id 'io.papermc.paperweight.userdev' version '2.0.0-beta.19' apply false
+  id 'io.papermc.paperweight.userdev' version '2.0.0-beta.21' apply false
 }
 
 rootProject.name = 'dynmap-common'
@@ -42,6 +42,7 @@ include ':bukkit-helper-121-6'
 // helper is rewritten to use reflection like bukkit-helper-121-11.
 // include ':bukkit-helper-121-10'
 include ':bukkit-helper-121-11'
+include ':bukkit-helper-26-2'
 include ':bukkit-helper'
 include ':dynmap-api'
 include ':DynmapCore'
@@ -95,6 +96,7 @@ project(':bukkit-helper-121-5').projectDir = "$rootDir/bukkit-helper-121-5" as F
 project(':bukkit-helper-121-6').projectDir = "$rootDir/bukkit-helper-121-6" as File
 // project(':bukkit-helper-121-10').projectDir = "$rootDir/bukkit-helper-121-10" as File
 project(':bukkit-helper-121-11').projectDir = "$rootDir/bukkit-helper-121-11" as File
+project(':bukkit-helper-26-2').projectDir = "$rootDir/bukkit-helper-26-2" as File
 project(':bukkit-helper').projectDir = "$rootDir/bukkit-helper" as File
 project(':dynmap-api').projectDir = "$rootDir/dynmap-api" as File
 project(':DynmapCore').projectDir = "$rootDir/DynmapCore" as File
