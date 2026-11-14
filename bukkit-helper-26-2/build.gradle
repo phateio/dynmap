@@ -1,0 +1,65 @@
+plugins {
+  id 'io.papermc.paperweight.userdev'
+}
+
+eclipse {
+    project {
+        name = "Dynmap(Spigot-26.2)"
+    }
+}
+
+description = 'bukkit-helper-26.2'
+
+java {
+    // JDK 25 toolchain is required to compile against the Paper 26.x dev bundle
+    // (paper-api is published as Java 25). The dev bundle download/resolution and
+    // the compile both need it.
+    toolchain.languageVersion = JavaLanguageVersion.of(25)
+}
+
+// Emit Java 21 bytecode even though we compile on JDK 25: the resulting classes
+// are bundled into the Spigot shadow jar, and the Shadow plugin's ASM cannot read
+// Java 25 (class file major version 69) yet. Java 21 bytecode still runs fine on
+// the Java 25 runtime that MC 26.x requires. options.release only changes the
+// output bytecode level, not the configuration's resolution attribute, so the
+// paper-api dependency (which requires a Java 25 consumer) still resolves.
+tasks.named('compileJava') {
+    options.release = 21
+}
+
+// Paper's 26.x dev bundle is Mojang-mapped only and no longer ships reobf
+// mappings, so produce a Mojang-mapped artifact and skip the reobfJar step.
+paperweight {
+    reobfArtifactConfiguration = io.papermc.paperweight.userdev.ReobfArtifactConfiguration.getMOJANG_PRODUCTION()
+}
+
+// This helper is compiled for the Java 25 runtime required by MC 26.x, but it is
+// bundled into the multi-version Spigot plugin (which targets Java 8) and only
+// loaded when running on a 26.x server. Publish the consumable variants without
+// the Java 25 target-version constraint so the Java 8 plugin module can bundle
+// the Mojang-mapped jar instead of falling back to the (now unavailable) reobf
+// variant.
+configurations.configureEach {
+    def jvmVersionAttr = org.gradle.api.attributes.java.TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE
+    if (canBeConsumed && (name == 'apiElements' || name == 'runtimeElements')) {
+        attributes {
+            attribute(jvmVersionAttr, 8)
+        }
+    }
+    // We emit Java 21 bytecode (options.release), which would otherwise make our
+    // own classpaths request Java 21 libraries and fail to resolve the Java 25
+    // paper-api. Keep resolving against the Java 25 toolchain we actually compile on.
+    if (canBeResolved && (name == 'compileClasspath' || name == 'runtimeClasspath')) {
+        attributes {
+            attribute(jvmVersionAttr, 25)
+        }
+    }
+}
+
+dependencies {
+  implementation project(':bukkit-helper')
+  implementation project(':dynmap-api')
+  implementation project(path: ':DynmapCore', configuration: 'shadow')
+  // Use paperweight dev bundle instead of manual BuildTools-built Spigot
+  paperweight.paperDevBundle("26.2.build.25-alpha")
+}
