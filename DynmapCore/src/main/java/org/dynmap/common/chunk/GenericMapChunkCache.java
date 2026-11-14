@@ -1347,11 +1347,17 @@ public abstract class GenericMapChunkCache extends MapChunkCache {
             		GenericNBTList plist = block_states.getList("palette", GenericNBTCompound.TAG_COMPOUND);
             		palette = new DynmapBlockState[plist.size()];
             		for (int pi = 0; pi < plist.size(); pi++) {
+            			// 26.3+ palette entries: bare string (default state), {"": name}, or {id, properties}; older: {Name, Properties}
+            			// Read as compound first: pre-1.21.5 ListTag.getString(int) returns SNBT for non-string elements
             			GenericNBTCompound tc = plist.getCompound(pi);
             			String pname = tc.getString("Name");
-            			if (tc.contains("Properties")) {
+            			if (pname.isEmpty()) pname = tc.getString("id");
+            			if (pname.isEmpty()) pname = tc.getString("");
+            			if (pname.isEmpty()) pname = plist.getString(pi);
+            			String propkey = tc.contains("Properties") ? "Properties" : (tc.contains("properties") ? "properties" : null);
+            			if (propkey != null) {
             				StringBuilder statestr = new StringBuilder();
-            				GenericNBTCompound prop = tc.getCompound("Properties");
+            				GenericNBTCompound prop = tc.getCompound(propkey);
             				for (String pid : prop.getAllKeys()) {
             					if (statestr.length() > 0) statestr.append(',');
             					statestr.append(pid).append('=').append(prop.getAsString(pid));
